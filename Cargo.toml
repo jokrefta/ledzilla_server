@@ -1,0 +1,8 @@
+[package]
+name = "ledzilla_server"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rouille = "3.6.2"
+serde = { version = "1.0.228", features = ["derive"] }
