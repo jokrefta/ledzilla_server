@@ -1,3 +1,5 @@
+date: 2026-07-03
+
 # LEDzilla API
 
 Base URL: `http://<pi-address>/api`
@@ -22,7 +24,6 @@ Returns display capabilities.
 Returns the current display state, reflecting exactly what is on the display.
 
 **Response:**
-
 ```json
 {
   "components": [ ... ]
@@ -33,29 +34,70 @@ Returns the current display state, reflecting exactly what is on the display.
 
 ## POST /state
 Replace the current display state. Implicitly turns the display on.
-
-**Request:** multipart/form-data
-- `state` (required): JSON containing component list
-- `uploads` (optional): one or more uploaded files, referenced by filename in the state JSON
+Request body is `application/json`.
 
 **Response:**
 - `204 No Content` on success
 - `400 Bad Request` with an error message on failure. State may
-  have been cleared - use GET /state to confirm current state.
+  have been cleared — use `GET /state` to confirm current state.
 
 ---
 
 ## POST /display/on
 Turns the display on, resuming rendering of the current state.
 
-**Response:** 204 No Content
+**Response:** `204 No Content`
 
 ---
 
 ## POST /display/off
 Turns the display off. Stops the refresh loop. State is preserved.
 
-**Response:** 204 No Content
+**Response:** `204 No Content`
+
+---
+
+## POST /files
+Upload a file. Server processes and stores it synchronously.
+Request is `multipart/form-data`. Response may be delayed for large files.
+
+**Fields:**
+- `file` (required): the file to upload
+- `name` (required): the name to store the file under
+- `width` (optional): target width in pixels
+- `height` (optional): target height in pixels
+- If only one dimension is given, aspect ratio is maintained.
+- If both are given, image is stretched to fit exactly.
+- If neither is given, the file is stored at its original dimensions.
+
+**Response:**
+- `201 Created` with header `Location: /api/files/<name>`
+  and body:
+  ```json
+  { "name": "<name>" }
+  ```
+- `400 Bad Request` if file is invalid or unsupported format
+
+---
+
+## GET /files
+List uploaded files.
+
+**Response:**
+```json
+{
+  "files": ["rickastley.gif", "logo.png"]
+}
+```
+
+---
+
+## DELETE /files/\<name\>
+Delete an uploaded file.
+
+**Response:**
+- `204 No Content` on success
+- `404 Not Found` if file does not exist
 
 ---
 
@@ -68,15 +110,14 @@ All components share these base fields:
   "type": "<component type>",
   "x": 0,
   "y": 0,
-  "scroll": { ... },        // TBD
-  "bounce": ...             // TBD
+  "scroll": { ... },
+  "bounce": ...
 }
 ```
 
 ---
 
 ### Text
-
 ```json
 {
   "type": "text",
@@ -85,7 +126,7 @@ All components share these base fields:
     "face": "Arial",
     "size": 12
   },
-  "color": ...              // TBD
+  "color": ...
 }
 ```
 
@@ -95,8 +136,7 @@ All components share these base fields:
 ```json
 {
   "type": "image",
-  "source": "file:<filename>",
-  "scale": 1.0
+  "source": "logo.png"
 }
 ```
 
@@ -106,9 +146,7 @@ All components share these base fields:
 ```json
 {
   "type": "video",
-  "source": "file:<filename>",
-  "scale": 1.0,
-  "speed": 1.0              // multiplier on native frame rate
+  "source": "rickastley.gif"
 }
 ```
 
@@ -120,9 +158,9 @@ All components share these base fields:
   "type": "rect",
   "width": 10,
   "height": 10,
-  "border_color": ...,      // TBD
+  "border_color": ...,
   "border_width": 1,
-  "fill_color": ...         // TBD
+  "fill_color": ...
 }
 ```
 
@@ -137,7 +175,10 @@ All components share these base fields:
   "x2": 10,
   "y2": 10,
   "width": 1,
-  "color": ...              // TBD
+  "color": ...
 }
 ```
 
+---
+
+*Fields marked `...` are TBD: color, scroll, and bounce are not yet fully specified.*
