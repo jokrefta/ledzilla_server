@@ -1,6 +1,8 @@
 use std::thread;
 
 mod server;
+mod component;
+mod renderer;
 
 fn main() {
     println!("Hello, world!");

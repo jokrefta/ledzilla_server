@@ -1,4 +1,4 @@
-date: 2026-07-03
+date: 2026-07-04
 
 # LEDzilla API
 
@@ -103,17 +103,21 @@ Delete an uploaded file.
 
 ## Component Schema
 
-All components share these base fields:
+All components have a `"type"` field declaring the component type.
+
+### Common properties
+All components share a `"common_properties"` object with these fields:
 
 ```json
-{
-  "type": "<component type>",
+"common_properties": {
   "x": 0,
   "y": 0,
   "scroll": { ... },
-  "bounce": ...
 }
 ```
+
+"scroll" is optional and currently not supported.
+For most component types, the "x" and "y" values represent the position of the top-left corner of the component.
 
 ---
 
@@ -121,14 +125,18 @@ All components share these base fields:
 ```json
 {
   "type": "text",
+  "common_properties": {...},
   "content": "Hello World",
   "font": {
-    "face": "Arial",
+    "typeface": "Arial",
     "size": 12
   },
-  "color": ...
+  "color": ...,
+  "alignment": ...,
 }
 ```
+
+For a text component, the positioning of the text relative to the provided "x" and "y" coordinates is given by the alignment property.
 
 ---
 
@@ -136,6 +144,7 @@ All components share these base fields:
 ```json
 {
   "type": "image",
+  "common_properties": {...},
   "source": "logo.png"
 }
 ```
@@ -146,6 +155,7 @@ All components share these base fields:
 ```json
 {
   "type": "video",
+  "common_properties": {...},
   "source": "rickastley.gif"
 }
 ```
@@ -156,6 +166,7 @@ All components share these base fields:
 ```json
 {
   "type": "rect",
+  "common_properties": {...},
   "width": 10,
   "height": 10,
   "border_color": ...,
@@ -170,15 +181,17 @@ All components share these base fields:
 ```json
 {
   "type": "line",
-  "x1": 0,
-  "y1": 0,
-  "x2": 10,
-  "y2": 10,
-  "width": 1,
+  "common_properties": {...},
+  "delta_x": 1,
+  "delta_y": -5,
+  "stroke_width": 1,
   "color": ...
 }
 ```
 
+For a line, the "common_properties" x and y values define one endpoint, and the "delta_x"/"delta_y" values define the 
+offset of the other endpoint relative to the first.
+
 ---
 
-*Fields marked `...` are TBD: color, scroll, and bounce are not yet fully specified.*
+*Fields marked `...` are TBD: color and scroll are not yet fully specified.*
