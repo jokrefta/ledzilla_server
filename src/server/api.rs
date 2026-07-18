@@ -1,5 +1,3 @@
-use std::sync::mpsc::Sender;
-
 use rouille::{Request, Response, input::post::BufferedFile, post_input, try_or_400};
 
 #[derive(serde::Serialize)]
@@ -21,14 +19,14 @@ pub fn handle_state_get(req: &Request) -> Response {
     Response::text("ok.")
 }
 
-pub fn handle_state_post(debug_sender: &Sender<String>, req: &Request) -> Response {
+pub fn handle_state_post(req: &Request) -> Response {
     let data = try_or_400!(post_input!(
         req, {
             state: String,
             uploads: Vec<BufferedFile>,
         }
     ));
-    debug_sender.send(format!("{:?}", data)).unwrap();
+    // debug_sender.send(format!("{:?}", data)).unwrap();
 
     Response::empty_204()
 }

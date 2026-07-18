@@ -1,5 +1,8 @@
+use embedded_graphics::geometry;
+#[cfg(feature = "simulator")]
+use embedded_graphics_simulator::{OutputSettingsBuilder, SimulatorDisplay, Window};
 use ledzilla_server::*;
-
+use log::info;
 
 fn main() {
     simple_logger::SimpleLogger::new()
@@ -12,7 +15,40 @@ fn main() {
         .unwrap();
 
     log::info!("Hello, world!");
-    run_server();
-    return;
 
+    let use_sim = true;
+    if use_sim {
+        run_server_sim();
+    } else {
+        todo!();
+    }
+
+    return;
+}
+
+fn run_server_sim() {
+    #[cfg(not(feature = "simulator"))]
+    panic!("Not compiled with simulator support!");
+
+    #[cfg(feature = "simulator")]
+    {
+        let create_sim = || {
+            type Color = embedded_graphics::pixelcolor::Rgb888;
+            let canvas: SimulatorDisplay<Color> =
+                SimulatorDisplay::new(geometry::Size::new(64 * 4, 64));
+
+            let output_settings = OutputSettingsBuilder::new()
+                .scale(4)
+                .pixel_spacing(1)
+                .build();
+
+            info!("Creating simulator window");
+            let mut window = Window::new("Test", &output_settings);
+            window.set_max_fps(60);
+
+            display::SimulatorDisplayWrapper::new(window, canvas)
+        };
+
+        run_server(create_sim);
+    }
 }
