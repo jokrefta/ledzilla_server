@@ -1,4 +1,5 @@
-date: 2026-07-04
+API version: 0.1.0
+date: 2026-07-18
 
 # LEDzilla API
 
@@ -14,7 +15,7 @@ Returns display capabilities.
 {
   "width": 64,
   "height": 32,
-  "version": "1.0.0"
+  "api_version": "0.1.0"
 }
 ```
 

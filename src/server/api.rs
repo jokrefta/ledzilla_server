@@ -5,19 +5,21 @@ use rouille::{Request, Response, input::post::BufferedFile, post_input, try_or_4
 
 use crate::renderer::RendererCommand;
 
+const API_VERSION: &str = "0.1.0";
+
 #[derive(serde::Serialize)]
 struct DisplayInfo {
     width: u32,
     height: u32,
-    version: String,
+    api_version: String,
 }
 
 pub fn handle_info(req: &Request) -> Response {
-    // TODO ?
+    // TODO - un-hardcode width/height!
     Response::json(&DisplayInfo {
         width: 64 * 4,
         height: 64,
-        version: "0.0.0".to_string(),
+        api_version: API_VERSION.to_string(),
     })
 }
 
