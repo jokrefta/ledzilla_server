@@ -33,6 +33,8 @@ fn run_server_sim() {
     #[cfg(feature = "simulator")]
     {
         let create_sim = || {
+            use ledzilla_server::display::GraphicsDisplay;
+
             type Color = embedded_graphics::pixelcolor::Rgb888;
             let canvas: SimulatorDisplay<Color> =
                 SimulatorDisplay::new(geometry::Size::new(64 * 4, 64));
@@ -46,7 +48,10 @@ fn run_server_sim() {
             let mut window = Window::new("Test", &output_settings);
             window.set_max_fps(60);
 
-            display::SimulatorDisplayWrapper::new(window, canvas)
+            let mut sim = display::SimulatorDisplayWrapper::new(window, canvas);
+            // Call update once so that the window actually appears
+            sim = sim.update_display();
+            sim
         };
 
         run_server(create_sim);

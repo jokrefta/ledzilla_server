@@ -1,4 +1,9 @@
-use rouille::{Request, Response, input::post::BufferedFile, post_input, try_or_400};
+use std::sync::mpsc::{SyncSender, channel};
+
+use log::trace;
+use rouille::{Request, Response, input::post::BufferedFile, post_input, try_or_400, try_or_404};
+
+use crate::renderer::RendererCommand;
 
 #[derive(serde::Serialize)]
 struct DisplayInfo {
@@ -8,6 +13,7 @@ struct DisplayInfo {
 }
 
 pub fn handle_info(req: &Request) -> Response {
+    // TODO ?
     Response::json(&DisplayInfo {
         width: 64 * 4,
         height: 64,
@@ -16,6 +22,7 @@ pub fn handle_info(req: &Request) -> Response {
 }
 
 pub fn handle_state_get(req: &Request) -> Response {
+    todo!();
     Response::text("ok.")
 }
 
@@ -26,17 +33,32 @@ pub fn handle_state_post(req: &Request) -> Response {
             uploads: Vec<BufferedFile>,
         }
     ));
-    // debug_sender.send(format!("{:?}", data)).unwrap();
+    todo!();
 
     Response::empty_204()
 }
 
-pub fn handle_display_on(req: &Request) -> Response {
-    // TODO
+pub fn handle_display_on(req: &Request, renderer: &SyncSender<RendererCommand>) -> Response {
+    let (response_sender, response_receiver) = channel::<bool>();
+    trace!("sending display start command");
+    renderer.send(RendererCommand::Start { response_sender }).unwrap();
+
+    if !response_receiver.recv().unwrap() {
+        panic!("Failed to start display");
+    }
+    trace!("got display start response");
     Response::empty_204()
 }
 
-pub fn handle_display_off(req: &Request) -> Response {
-    // TODO
+pub fn handle_display_off(req: &Request, renderer: &SyncSender<RendererCommand>) -> Response {
+    let (response_sender, response_receiver) = channel::<bool>();
+    trace!("sending display stop command");
+    renderer.send(RendererCommand::Stop {response_sender}).unwrap();
+
+    if !response_receiver.recv().unwrap() {
+        panic!("Failed to stop display");
+    }
+    trace!("got display stop response");
+
     Response::empty_204()
 }

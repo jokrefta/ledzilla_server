@@ -53,9 +53,6 @@ pub enum Component {
 
 #[cfg(test)]
 mod tests {
-
-    use std::str::FromStr;
-
     use super::*;
 
     fn test_deserialization<'a, T>(as_json: &'a str, as_rust: &T)

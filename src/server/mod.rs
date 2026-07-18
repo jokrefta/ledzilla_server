@@ -6,6 +6,7 @@ use rouille::{Request, Response, router, try_or_404};
 use crate::renderer::RendererCommand;
 
 mod api;
+// mod response_helpers;
 
 fn log_ok(req: &Request, resp: &Response, _elap: std::time::Duration) {
     info!("{} {} -> {}", req.method(), req.raw_url(), resp.status_code);
@@ -37,11 +38,11 @@ pub fn handle_request(renderer_sender: SyncSender<RendererCommand>, req: &Reques
             },
             (POST) (/api/display/on) => {
                 // debug_sender.send(format!("{:?}", req)).unwrap();
-                api::handle_display_on(req)
+                api::handle_display_on(req, &renderer_sender)
             },
             (POST) (/api/display/off) => {
                 // debug_sender.send(format!("{:?}", req)).unwrap();
-                api::handle_display_off(req)
+                api::handle_display_off(req, &renderer_sender)
             },
             _ => {
                 if req.method() == "GET" {
