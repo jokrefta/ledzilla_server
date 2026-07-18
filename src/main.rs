@@ -1,23 +1,18 @@
-use std::thread;
+use ledzilla_server::*;
 
-mod server;
-mod component;
-mod renderer;
 
 fn main() {
-    println!("Hello, world!");
+    simple_logger::SimpleLogger::new()
+        .env()
+        .with_local_timestamps()
+        .with_timestamp_format(time::macros::format_description!(
+            "[hour]:[minute]:[second]"
+        ))
+        .init()
+        .unwrap();
 
-    let (s, r) = std::sync::mpsc::channel::<String>();
+    log::info!("Hello, world!");
+    run_server();
+    return;
 
-    let receiver_thread = thread::spawn(move || {
-        loop {
-            let val = r.recv().unwrap();
-            println!("{}", val);
-            println!("");
-        }
-    });
-
-    rouille::start_server("127.0.0.1:8080", move |req| {
-        server::handle_request(s.clone(), req)
-    });
 }
