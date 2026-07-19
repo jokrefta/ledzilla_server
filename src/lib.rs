@@ -1,6 +1,5 @@
 use std::thread;
 
-
 use display::GraphicsDisplay;
 use renderer::run_renderer_thread;
 

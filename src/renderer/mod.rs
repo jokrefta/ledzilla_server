@@ -1,15 +1,19 @@
-use std::sync::mpsc::{Receiver, Sender};
-
+use crate::{component::ComponentList, display::GraphicsDisplay};
 use log::debug;
-
-use crate::display::GraphicsDisplay;
+use std::sync::mpsc::{Receiver, Sender};
 
 #[derive(Debug)]
 pub enum RendererCommand {
     // Will likely mirror the API pretty closely
-    Start { response_sender: Sender<bool> },
-    Stop { response_sender: Sender<bool> },
-    Todo,
+    Start {
+        response_sender: Sender<bool>,
+    },
+    Stop {
+        response_sender: Sender<bool>,
+    },
+    GetComponents {
+        response_sender: Sender<ComponentList>,
+    },
 }
 
 pub fn run_renderer_thread<F, Disp>(
@@ -20,6 +24,7 @@ pub fn run_renderer_thread<F, Disp>(
     Disp: GraphicsDisplay,
 {
     let mut display: Option<Disp> = None;
+    let components = ComponentList::new();
     loop {
         let cmd = command_receiver.recv().unwrap();
         debug!("received {:?}", cmd);
@@ -36,8 +41,8 @@ pub fn run_renderer_thread<F, Disp>(
                 }
                 response_sender.send(true).unwrap();
             }
-            _ => {
-                todo!()
+            RendererCommand::GetComponents { response_sender } => {
+                response_sender.send(components.clone()).unwrap();
             }
         }
     }

@@ -25,12 +25,11 @@ pub fn handle_request(renderer_sender: SyncSender<RendererCommand>, req: &Reques
             },
             (GET) (/api/info) => {
                 // debug_sender.send(format!("{:?}", req)).unwrap();
-                api::handle_info(req)
+                api::handle_info_get()
             },
             (GET) (/api/state) => {
                 // debug_sender.send(format!("{:?}", req)).unwrap();
-                api::handle_state_get(req)
-
+                api::handle_state_get(&renderer_sender)
             },
             (POST) (/api/state) => {
                 // debug_sender.send(format!("{:?}", req)).unwrap();
@@ -38,11 +37,11 @@ pub fn handle_request(renderer_sender: SyncSender<RendererCommand>, req: &Reques
             },
             (POST) (/api/display/on) => {
                 // debug_sender.send(format!("{:?}", req)).unwrap();
-                api::handle_display_on(req, &renderer_sender)
+                api::handle_display_on(&renderer_sender)
             },
             (POST) (/api/display/off) => {
                 // debug_sender.send(format!("{:?}", req)).unwrap();
-                api::handle_display_off(req, &renderer_sender)
+                api::handle_display_off(&renderer_sender)
             },
             _ => {
                 if req.method() == "GET" {

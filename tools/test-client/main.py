@@ -3,6 +3,7 @@ import requests
 import traceback
 from time import sleep
 from typing import List, Callable
+import termcolor
 
 SERVER_ROOT = "http://127.0.0.1:8080/"
 API_ROOT = SERVER_ROOT + "api/"
@@ -13,6 +14,13 @@ def assert_get_info():
     resp = requests.get(API_ROOT + "info")
     print("  Response [{}]: {}".format(resp.status_code, resp.text))
     assert 200 == resp.status_code
+
+def assert_get_state():
+    print("Sending GET /state")
+    resp = requests.get(API_ROOT + "state")
+    print("  Response [{}]: {}".format(resp.status_code, resp.text))
+    assert 200 == resp.status_code
+    assert '"components"' in resp.text
 
 def assert_post_display_on():
     print("Sending POST /display/on")
@@ -49,6 +57,10 @@ def test_display_on_off():
     sleep(2)
     assert_post_display_off()
 
+@testcase
+def test_get_state():
+    assert_get_state()
+
 
 
 print("Starting...")
@@ -59,7 +71,8 @@ for test in test_cases:
         print("Running test", test.__name__)
         test()
     except requests.exceptions.ConnectionError as e:
-        print("Connection failed:", str(e))
+        termcolor.cprint("Connection failed: " + str(e), "red")
+        break
     except AssertionError as e:
         traceback.print_exception(e)
-        print("Failed assertion. Continuing...")
+        termcolor.cprint("Failed assertion. Continuing...", "red")

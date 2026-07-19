@@ -1,9 +1,9 @@
 use std::sync::mpsc::{SyncSender, channel};
 
 use log::trace;
-use rouille::{Request, Response, input::post::BufferedFile, post_input, try_or_400, try_or_404};
+use rouille::{Request, Response, input::post::BufferedFile, post_input, try_or_400};
 
-use crate::renderer::RendererCommand;
+use crate::{component::ComponentList, renderer::RendererCommand};
 
 const API_VERSION: &str = "0.1.0";
 
@@ -14,7 +14,12 @@ struct DisplayInfo {
     api_version: String,
 }
 
-pub fn handle_info(req: &Request) -> Response {
+#[derive(serde::Deserialize, serde::Serialize)]
+struct ComponentState {
+    components: ComponentList,
+}
+
+pub fn handle_info_get() -> Response {
     // TODO - un-hardcode width/height!
     Response::json(&DisplayInfo {
         width: 64 * 4,
@@ -23,9 +28,16 @@ pub fn handle_info(req: &Request) -> Response {
     })
 }
 
-pub fn handle_state_get(req: &Request) -> Response {
-    todo!();
-    Response::text("ok.")
+pub fn handle_state_get(renderer: &SyncSender<RendererCommand>) -> Response {
+    let (response_sender, response_receiver) = channel::<ComponentList>();
+    trace!("sending get component state command");
+    renderer
+        .send(RendererCommand::GetComponents { response_sender })
+        .unwrap();
+
+    let components = response_receiver.recv().unwrap();
+    trace!("got state response {:?}", components);
+    Response::json(&ComponentState { components })
 }
 
 pub fn handle_state_post(req: &Request) -> Response {
@@ -40,10 +52,12 @@ pub fn handle_state_post(req: &Request) -> Response {
     Response::empty_204()
 }
 
-pub fn handle_display_on(req: &Request, renderer: &SyncSender<RendererCommand>) -> Response {
+pub fn handle_display_on(renderer: &SyncSender<RendererCommand>) -> Response {
     let (response_sender, response_receiver) = channel::<bool>();
     trace!("sending display start command");
-    renderer.send(RendererCommand::Start { response_sender }).unwrap();
+    renderer
+        .send(RendererCommand::Start { response_sender })
+        .unwrap();
 
     if !response_receiver.recv().unwrap() {
         panic!("Failed to start display");
@@ -52,10 +66,12 @@ pub fn handle_display_on(req: &Request, renderer: &SyncSender<RendererCommand>) 
     Response::empty_204()
 }
 
-pub fn handle_display_off(req: &Request, renderer: &SyncSender<RendererCommand>) -> Response {
+pub fn handle_display_off(renderer: &SyncSender<RendererCommand>) -> Response {
     let (response_sender, response_receiver) = channel::<bool>();
     trace!("sending display stop command");
-    renderer.send(RendererCommand::Stop {response_sender}).unwrap();
+    renderer
+        .send(RendererCommand::Stop { response_sender })
+        .unwrap();
 
     if !response_receiver.recv().unwrap() {
         panic!("Failed to stop display");

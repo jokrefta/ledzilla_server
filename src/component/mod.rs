@@ -5,7 +5,9 @@ use color::ColorSpec;
 
 mod color;
 
-#[derive(Deserialize, Serialize, PartialEq, Debug)]
+pub type ComponentList = Vec<Component>;
+
+#[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
 #[skip_serializing_none]
 pub struct CommonProperties {
     pub x: u32,
@@ -13,13 +15,13 @@ pub struct CommonProperties {
     pub scroll: Option<()>,
 }
 
-#[derive(Deserialize, Serialize, PartialEq, Debug)]
+#[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
 pub struct Font {
     pub typeface: String,
     pub size: u32,
 }
 
-#[derive(Deserialize, Serialize, PartialEq, Debug)]
+#[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
 pub struct Text {
     pub common_properties: CommonProperties,
     pub font: Font,
@@ -27,13 +29,13 @@ pub struct Text {
     pub alignment: (),
 }
 
-#[derive(Deserialize, Serialize, PartialEq, Debug)]
+#[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
 pub struct Image {
     pub common_properties: CommonProperties,
     pub source: String,
 }
 
-#[derive(Deserialize, Serialize, PartialEq, Debug)]
+#[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
 pub struct Line {
     pub common_properties: CommonProperties,
     pub delta_x: i32,
@@ -42,7 +44,7 @@ pub struct Line {
     pub color: ColorSpec,
 }
 
-#[derive(Deserialize, Serialize, PartialEq, Debug)]
+#[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
 #[serde(tag = "type")]
 #[serde(rename_all = "lowercase")]
 pub enum Component {
