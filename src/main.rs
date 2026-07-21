@@ -8,9 +8,7 @@ fn main() {
     simple_logger::SimpleLogger::new()
         .env()
         .with_local_timestamps()
-        .with_timestamp_format(time::macros::format_description!(
-            "[hour]:[minute]:[second]"
-        ))
+        .with_timestamp_format(time::macros::format_description!("[hour]:[minute]:[second]"))
         .init()
         .unwrap();
 
@@ -36,13 +34,9 @@ fn run_server_sim() {
             use ledzilla_server::display::GraphicsDisplay;
 
             type Color = embedded_graphics::pixelcolor::Rgb888;
-            let canvas: SimulatorDisplay<Color> =
-                SimulatorDisplay::new(geometry::Size::new(64 * 4, 64));
+            let canvas: SimulatorDisplay<Color> = SimulatorDisplay::new(geometry::Size::new(64 * 4, 64));
 
-            let output_settings = OutputSettingsBuilder::new()
-                .scale(4)
-                .pixel_spacing(1)
-                .build();
+            let output_settings = OutputSettingsBuilder::new().scale(4).pixel_spacing(1).build();
 
             info!("Creating simulator window");
             let mut window = Window::new("Test", &output_settings);

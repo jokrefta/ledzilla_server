@@ -34,6 +34,12 @@ def assert_post_display_off():
     print("  Response [{}]: {}".format(resp.status_code, resp.text))
     assert 204 == resp.status_code
 
+def assert_post_state(state_json):
+    print("Sending POST /state")
+    resp = requests.post(API_ROOT + "state", json=state_json)
+    print("  Response [{}]: {}".format(resp.status_code, resp.text))
+    assert 204 == resp.status_code
+
 #####################################################
 
 test_cases : List[Callable]= []
@@ -60,6 +66,10 @@ def test_display_on_off():
 @testcase
 def test_get_state():
     assert_get_state()
+
+@testcase
+def test_post_state_empty():
+    assert_post_state({"components": []})
 
 
 

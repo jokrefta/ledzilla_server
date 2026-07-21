@@ -1,15 +1,25 @@
 use std::{fs::File, sync::mpsc::SyncSender};
 
-use log::{error, info};
+use log::{error, info, warn};
 use rouille::{Request, Response, router, try_or_404};
 
 use crate::renderer::RendererCommand;
 
 mod api;
-// mod response_helpers;
+
+fn log_err_result<T, U: std::error::Error>(result: Result<T, U>) -> Result<T, U> {
+    if let Err(ref e) = result {
+        warn!("Got error result - {}", e.to_string());
+    }
+    result
+}
 
 fn log_ok(req: &Request, resp: &Response, _elap: std::time::Duration) {
-    info!("{} {} -> {}", req.method(), req.raw_url(), resp.status_code);
+    if resp.is_error() {
+        warn!("{} {} -> {}", req.method(), req.raw_url(), resp.status_code);
+    } else {
+        info!("{} {} -> {}", req.method(), req.raw_url(), resp.status_code);
+    }
 }
 
 fn log_err(req: &Request, _elap: std::time::Duration) {
@@ -20,7 +30,7 @@ pub fn handle_request(renderer_sender: SyncSender<RendererCommand>, req: &Reques
     rouille::log_custom(req, log_ok, log_err, || {
         router!(req,
             (GET) (/) => {
-                let index = try_or_404!(File::open("web_content/index.html"));
+                let index = try_or_404!(log_err_result(File::open("web_content/index.html")));
                 Response::from_file("text/html", index)
             },
             (GET) (/api/info) => {
@@ -33,7 +43,7 @@ pub fn handle_request(renderer_sender: SyncSender<RendererCommand>, req: &Reques
             },
             (POST) (/api/state) => {
                 // debug_sender.send(format!("{:?}", req)).unwrap();
-                api::handle_state_post(req)
+                api::handle_state_post(req, &renderer_sender)
             },
             (POST) (/api/display/on) => {
                 // debug_sender.send(format!("{:?}", req)).unwrap();

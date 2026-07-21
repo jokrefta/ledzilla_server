@@ -39,6 +39,12 @@ mod simulator {
         }
     }
 
+    impl Debug for SimulatorDisplayWrapper {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "SimulatorDisplayWrapper {{...}}")
+        }
+    }
+
     impl GraphicsDisplay for SimulatorDisplayWrapper {
         type DrawTarget = SimulatorDisplay<Rgb888>;
 
