@@ -7,7 +7,7 @@ use log::trace;
 use rouille::{Request, Response, input::post::BufferedFile, post_input, try_or_400};
 
 use super::log_err_result;
-use crate::{graphics_component::ComponentList, renderer::RendererCommand};
+use crate::{graphics_component::ComponentList, renderer::Command};
 
 const API_VERSION: &str = "0.1.0";
 
@@ -71,11 +71,11 @@ pub fn handle_info_get() -> Response {
     })
 }
 
-pub fn handle_state_get(renderer: &SyncSender<RendererCommand>) -> Response {
+pub fn handle_state_get(renderer: &SyncSender<Command>) -> Response {
     let (response_sender, response_receiver) = channel::<ComponentList>();
     trace!("sending get component state command");
     renderer
-        .send(RendererCommand::GetComponents { response_sender })
+        .send(Command::GetComponents { response_sender })
         .unwrap();
 
     let components = response_receiver.recv().unwrap();
@@ -83,11 +83,11 @@ pub fn handle_state_get(renderer: &SyncSender<RendererCommand>) -> Response {
     Response::json(&ComponentState { components })
 }
 
-pub fn handle_state_post(req: &Request, renderer: &SyncSender<RendererCommand>) -> Response {
+pub fn handle_state_post(req: &Request, renderer: &SyncSender<Command>) -> Response {
     let state: ComponentState = try_or_400!(log_err_result(json_input(req)));
     let (response_sender, response_receiver) = channel::<bool>();
     renderer
-        .send(RendererCommand::SetComponents {
+        .send(Command::SetComponents {
             components: state.components,
             response_sender,
         })
@@ -100,10 +100,10 @@ pub fn handle_state_post(req: &Request, renderer: &SyncSender<RendererCommand>) 
     Response::empty_204()
 }
 
-pub fn handle_display_on(renderer: &SyncSender<RendererCommand>) -> Response {
+pub fn handle_display_on(renderer: &SyncSender<Command>) -> Response {
     let (response_sender, response_receiver) = channel::<bool>();
     trace!("sending display start command");
-    renderer.send(RendererCommand::Start { response_sender }).unwrap();
+    renderer.send(Command::Start { response_sender }).unwrap();
 
     if !response_receiver.recv().unwrap() {
         panic!("Failed to start display");
@@ -112,10 +112,10 @@ pub fn handle_display_on(renderer: &SyncSender<RendererCommand>) -> Response {
     Response::empty_204()
 }
 
-pub fn handle_display_off(renderer: &SyncSender<RendererCommand>) -> Response {
+pub fn handle_display_off(renderer: &SyncSender<Command>) -> Response {
     let (response_sender, response_receiver) = channel::<bool>();
     trace!("sending display stop command");
-    renderer.send(RendererCommand::Stop { response_sender }).unwrap();
+    renderer.send(Command::Stop { response_sender }).unwrap();
 
     if !response_receiver.recv().unwrap() {
         panic!("Failed to stop display");

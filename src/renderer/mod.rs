@@ -1,10 +1,13 @@
+use crate::renderer::state::{State, StateWrapper};
 use crate::{display::GraphicsDisplay, graphics_component::ComponentList};
 use log::debug;
 use std::fmt::Debug;
 use std::sync::mpsc::{Receiver, Sender};
 
+mod state;
+
 #[derive(Debug)]
-pub enum RendererCommand {
+pub enum Command {
     // Will likely mirror the API pretty closely
     Start {
         response_sender: Sender<bool>,
@@ -21,20 +24,14 @@ pub enum RendererCommand {
     },
 }
 
-#[derive(Debug)]
-enum RendererState<Disp: GraphicsDisplay + Debug> {
-    Stopped,
-    RenderingStatic { display: Disp },
-    RenderingDynamic { display: Disp },
-}
-
 pub struct Renderer<F, Disp>
 where
     F: FnMut() -> Disp,
     Disp: GraphicsDisplay + Debug,
 {
     display_provider: F,
-    state: RendererState<Disp>,
+    // Should always be valid, but is Option so we can move out of &mut self
+    state: StateWrapper<Disp>,
     components: ComponentList,
 }
 
@@ -46,12 +43,12 @@ where
     pub fn new(display_provider: F) -> Self {
         Self {
             display_provider,
-            state: RendererState::Stopped,
+            state: StateWrapper::new(State::Stopped),
             components: ComponentList::new(),
         }
     }
 
-    pub fn run(&mut self, command_receiver: Receiver<RendererCommand>) {
+    pub fn run(&mut self, command_receiver: Receiver<Command>) {
         // let mut state = RendererState::<Disp>::Stopped;
         // let mut components = ComponentList::new();
 
@@ -64,11 +61,11 @@ where
 
     // Run until a command is received, and return it. Since a command may cause a state transition, we
     // break from this function to handle it before re-entering in the updated state.
-    fn run_until_next_command(&mut self, command_receiver: &Receiver<RendererCommand>) -> RendererCommand {
+    fn run_until_next_command(&mut self, command_receiver: &Receiver<Command>) -> Command {
         // If we are rendering something dynamic, we want to keep doing work in this loop and
         // do a non-blocking check each iteration to see if a command has come in.
         // Otherwise, we want to block until a command has come in.
-        if let RendererState::RenderingDynamic { display: _display } = &self.state {
+        if let State::RenderingDynamic { display: _display } = self.state.get_ref() {
             loop {
                 // Early return if command found
                 match command_receiver.try_recv() {
@@ -89,65 +86,85 @@ where
     }
 
     // Handle event, updating state if necessary
-    fn handle_command(&mut self, command: RendererCommand) {
-        match (&self.state, command) {
-            // -------------------------------------------------------------------------
-            (RendererState::Stopped, RendererCommand::Start { response_sender }) => {
-                self.state = self.start_up(response_sender);
-            }
-            // -------------------------------------------------------------------------
-            (RendererState::Stopped, RendererCommand::Stop { response_sender }) => {
-                // no-op
-                response_sender.send(true).unwrap();
-            }
-            // -------------------------------------------------------------------------
-            (
-                RendererState::RenderingStatic { .. } | RendererState::RenderingDynamic { .. },
-                RendererCommand::Stop { response_sender },
-            ) => {
-                self.state = self.shut_down(response_sender);
-            }
-            // -------------------------------------------------------------------------
-            (
-                RendererState::RenderingStatic { .. } | RendererState::RenderingDynamic { .. },
-                RendererCommand::Start { response_sender },
-            ) => {
-                response_sender.send(true).unwrap();
-            }
-            // -------------------------------------------------------------------------
-            (_, RendererCommand::GetComponents { response_sender }) => {
-                response_sender.send(self.components.clone()).unwrap();
-            }
-            // -------------------------------------------------------------------------
-            (
-                _,
-                RendererCommand::SetComponents {
-                    response_sender,
-                    components,
-                },
-            ) => {
-                self.components = components;
-                response_sender.send(true).unwrap();
-            }
-            // -------------------------------------------------------------------------
-            #[allow(unreachable_patterns)]
-            (curstate, cmd) => {
-                debug!("Ignoring command {:?} in state {:?}", cmd, curstate);
-            } // -------------------------------------------------------------------------
-        }
+    fn handle_command(&mut self, command: Command) {
+        self.state.update(|curstate| {
+            // #[rustfmt::skip]
+            let nextstate = match (curstate, command) {
+                //__________________________________________________
+                (
+                    State::Stopped, 
+                    Command::Start { response_sender }
+                ) => 
+                    Self::start_up(&mut self.display_provider, response_sender),
+                //__________________________________________________
+                (
+                    State::Stopped, 
+                    Command::Stop { response_sender }
+                ) =>
+                {
+                    // no-op
+                    response_sender.send(true).unwrap();
+                    State::Stopped
+                }
+                //__________________________________________________
+                ( 
+                    State::RenderingStatic { .. } | State::RenderingDynamic { .. }, 
+                    Command::Stop { response_sender }
+                ) => 
+                    Self::shut_down(response_sender),
+                //__________________________________________________
+                (
+                    state @ (State::RenderingStatic { .. } | State::RenderingDynamic { .. }),
+                    Command::Start { response_sender },
+                ) => {
+                    response_sender.send(true).unwrap();
+                    state
+                }
+                //__________________________________________________
+                (
+                    state, 
+                    Command::GetComponents { response_sender }
+                ) => 
+                {
+                    response_sender.send(self.components.clone()).unwrap();
+                    state
+                }
+                //__________________________________________________
+                (
+                    state,
+                    Command::SetComponents { response_sender, components, },
+                ) => 
+                {
+                    self.components = components;
+                    response_sender.send(true).unwrap();
+                    state
+                }
+                //__________________________________________________
+                #[allow(unreachable_patterns)]
+                (
+                    state, 
+                    cmd
+                ) => 
+                {
+                    debug!("Ignoring command {:?} in state {:?}", cmd, state);
+                    state
+                } 
+            };
+            nextstate
+        });
     }
 
     // Create display and return next state
-    fn start_up(&mut self, success_sender: Sender<bool>) -> RendererState<Disp> {
+    fn start_up(display_provider: &mut F, success_sender: Sender<bool>) -> State<Disp> {
         // TODO handle transitioning into dynamic
-        let display = (self.display_provider)();
+        let display = (display_provider)();
         success_sender.send(true).unwrap();
-        RendererState::RenderingStatic { display }
+        State::RenderingStatic { display }
     }
 
     // Shut down display and return next state
-    fn shut_down(&mut self, success_sender: Sender<bool>) -> RendererState<Disp> {
+    fn shut_down(success_sender: Sender<bool>) -> State<Disp> {
         success_sender.send(true).unwrap();
-        RendererState::Stopped
+        State::Stopped
     }
 }

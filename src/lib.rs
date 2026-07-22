@@ -3,7 +3,7 @@ use std::thread;
 use display::GraphicsDisplay;
 use renderer::Renderer;
 
-use crate::renderer::RendererCommand;
+use crate::renderer::Command;
 
 pub mod display;
 mod graphics_component;
@@ -15,7 +15,7 @@ where
     F: Send + FnMut() -> Disp,
     Disp: GraphicsDisplay + std::fmt::Debug,
 {
-    let (snd, rcv) = std::sync::mpsc::sync_channel::<RendererCommand>(2);
+    let (snd, rcv) = std::sync::mpsc::sync_channel::<Command>(2);
 
     thread::scope(|s| {
         s.spawn(|| {

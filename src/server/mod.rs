@@ -3,7 +3,7 @@ use std::{fs::File, sync::mpsc::SyncSender};
 use log::{error, info, warn};
 use rouille::{Request, Response, router, try_or_404};
 
-use crate::renderer::RendererCommand;
+use crate::renderer;
 
 mod api;
 
@@ -26,7 +26,7 @@ fn log_err(req: &Request, _elap: std::time::Duration) {
     error!("Handler panicked: {} {}", req.method(), req.raw_url());
 }
 
-pub fn handle_request(renderer_sender: SyncSender<RendererCommand>, req: &Request) -> Response {
+pub fn handle_request(renderer_sender: SyncSender<renderer::Command>, req: &Request) -> Response {
     rouille::log_custom(req, log_ok, log_err, || {
         router!(req,
             (GET) (/) => {
