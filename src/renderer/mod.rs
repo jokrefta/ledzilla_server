@@ -1,14 +1,18 @@
+use crate::graphics_component;
 use crate::renderer::state::{State, StateWrapper};
-use crate::{display::GraphicsDisplay, graphics_component::ComponentList};
+use crate::{
+    display::GraphicsDisplay,
+    graphics_component::{ComponentDrawer, ComponentList},
+};
 use log::debug;
 use std::fmt::Debug;
 use std::sync::mpsc::{Receiver, Sender};
 
+mod graphics;
 mod state;
 
 #[derive(Debug)]
 pub enum Command {
-    // Will likely mirror the API pretty closely
     Start {
         response_sender: Sender<bool>,
     },
@@ -32,7 +36,8 @@ where
     display_provider: F,
     // Should always be valid, but is Option so we can move out of &mut self
     state: StateWrapper<Disp>,
-    components: ComponentList,
+    // components: ComponentList,
+    components: Vec<Box<dyn ComponentDrawer<Disp::DrawTarget>>>,
 }
 
 impl<F, Disp> Renderer<F, Disp>
@@ -44,14 +49,11 @@ where
         Self {
             display_provider,
             state: StateWrapper::new(State::Stopped),
-            components: ComponentList::new(),
+            components: Vec::new(),
         }
     }
 
     pub fn run(&mut self, command_receiver: Receiver<Command>) {
-        // let mut state = RendererState::<Disp>::Stopped;
-        // let mut components = ComponentList::new();
-
         loop {
             let command = self.run_until_next_command(&command_receiver);
             debug!("received {:?} in state {:?}", command, self.state);
@@ -91,27 +93,20 @@ where
             // #[rustfmt::skip]
             let nextstate = match (curstate, command) {
                 //__________________________________________________
-                (
-                    State::Stopped, 
-                    Command::Start { response_sender }
-                ) => 
-                    Self::start_up(&mut self.display_provider, response_sender),
+                (State::Stopped, Command::Start { response_sender }) => {
+                    Self::start_up(&mut self.display_provider, response_sender)
+                }
                 //__________________________________________________
-                (
-                    State::Stopped, 
-                    Command::Stop { response_sender }
-                ) =>
-                {
+                (State::Stopped, Command::Stop { response_sender }) => {
                     // no-op
                     response_sender.send(true).unwrap();
                     State::Stopped
                 }
                 //__________________________________________________
-                ( 
-                    State::RenderingStatic { .. } | State::RenderingDynamic { .. }, 
-                    Command::Stop { response_sender }
-                ) => 
-                    Self::shut_down(response_sender),
+                (
+                    State::RenderingStatic { .. } | State::RenderingDynamic { .. },
+                    Command::Stop { response_sender },
+                ) => Self::shut_down(response_sender),
                 //__________________________________________________
                 (
                     state @ (State::RenderingStatic { .. } | State::RenderingDynamic { .. }),
@@ -121,34 +116,28 @@ where
                     state
                 }
                 //__________________________________________________
-                (
-                    state, 
-                    Command::GetComponents { response_sender }
-                ) => 
-                {
+                (state, Command::GetComponents { response_sender }) => {
                     response_sender.send(self.components.clone()).unwrap();
                     state
                 }
                 //__________________________________________________
                 (
                     state,
-                    Command::SetComponents { response_sender, components, },
-                ) => 
-                {
-                    self.components = components;
+                    Command::SetComponents {
+                        response_sender,
+                        components,
+                    },
+                ) => {
+                    self.components = components.into_iter().map(|a| Box::new(a.into())).collect();
                     response_sender.send(true).unwrap();
                     state
                 }
                 //__________________________________________________
                 #[allow(unreachable_patterns)]
-                (
-                    state, 
-                    cmd
-                ) => 
-                {
+                (state, cmd) => {
                     debug!("Ignoring command {:?} in state {:?}", cmd, state);
                     state
-                } 
+                }
             };
             nextstate
         });
@@ -166,5 +155,11 @@ where
     fn shut_down(success_sender: Sender<bool>) -> State<Disp> {
         success_sender.send(true).unwrap();
         State::Stopped
+    }
+
+    fn render_static(mut display: Disp, components: ComponentList) -> Disp {
+        let canvas = display.get_draw_target();
+
+        display.update_display()
     }
 }

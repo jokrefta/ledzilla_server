@@ -1,9 +1,11 @@
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-use color::ColorSpec;
+pub use color::ColorSpec;
+pub use draw::ComponentDrawer;
 
 mod color;
+mod draw;
 
 pub type ComponentList = Vec<Component>;
 
@@ -51,6 +53,10 @@ pub enum Component {
     Image(Image),
     Text(Text),
     Line(Line),
+}
+
+pub fn is_static(_c: Component) -> bool {
+    true // Once we support animated components, this will change
 }
 
 #[cfg(test)]

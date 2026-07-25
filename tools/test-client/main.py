@@ -8,6 +8,8 @@ import termcolor
 SERVER_ROOT = "http://127.0.0.1:8080/"
 API_ROOT = SERVER_ROOT + "api/"
 
+def get_empty_state_json():
+    return {"components": []}
 
 def assert_get_info():
     print("Sending GET /info")
@@ -34,11 +36,22 @@ def assert_post_display_off():
     print("  Response [{}]: {}".format(resp.status_code, resp.text))
     assert 204 == resp.status_code
 
+def assert_flash_display(seconds):
+    assert_post_display_on()
+    sleep(seconds)
+    assert_post_display_off()
+
+
 def assert_post_state(state_json):
     print("Sending POST /state")
     resp = requests.post(API_ROOT + "state", json=state_json)
     print("  Response [{}]: {}".format(resp.status_code, resp.text))
     assert 204 == resp.status_code
+
+def assert_reset_state():
+    # reset as much as possible for new test case
+    assert_post_display_off()
+    assert_post_state(get_empty_state_json())
 
 #####################################################
 
@@ -59,9 +72,7 @@ def test_display_on():
 
 @testcase
 def test_display_on_off():
-    assert_post_display_on()
-    sleep(2)
-    assert_post_display_off()
+    assert_flash_display(2)
 
 @testcase
 def test_get_state():
@@ -69,7 +80,23 @@ def test_get_state():
 
 @testcase
 def test_post_state_empty():
-    assert_post_state({"components": []})
+    assert_post_state(get_empty_state_json())
+
+@testcase
+def test_post_state_line_and_render():
+    assert_reset_state()
+    json_state = {"components": [
+        {
+            "type": "line",
+            "common_properties": { "x": 0, "y": 0, },
+            "delta_x": 1,
+            "delta_y": -5,
+            "stroke_width": 1,
+            "color": "#0022FF"
+        }
+    ]}
+    assert_post_state(json_state)
+    assert_flash_display(2)
 
 
 
