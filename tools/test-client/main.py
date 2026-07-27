@@ -67,15 +67,13 @@ def test_get_info():
     assert_get_info()
 
 @testcase
-def test_display_on():
-    assert_post_display_on()
-
-@testcase
 def test_display_on_off():
+    assert_reset_state()
     assert_flash_display(2)
 
 @testcase
 def test_get_state():
+    assert_reset_state()
     assert_get_state()
 
 @testcase
@@ -83,12 +81,29 @@ def test_post_state_empty():
     assert_post_state(get_empty_state_json())
 
 @testcase
+def test_post_state_line_and_clear_state_and_get_state():
+    assert_reset_state()
+    json_state = {"components": [
+        {
+            "type": "line",
+            "common_properties": { "x": 10, "y": 10, },
+            "delta_x": 1,
+            "delta_y": -5,
+            "stroke_width": 1,
+            "color": "#0022FF"
+        }
+    ]}
+    assert_post_state(json_state)
+    assert_post_state(get_empty_state_json())
+    assert_get_state()
+
+@testcase
 def test_post_state_line_and_render():
     assert_reset_state()
     json_state = {"components": [
         {
             "type": "line",
-            "common_properties": { "x": 0, "y": 0, },
+            "common_properties": { "x": 10, "y": 10, },
             "delta_x": 1,
             "delta_y": -5,
             "stroke_width": 1,
@@ -97,6 +112,22 @@ def test_post_state_line_and_render():
     ]}
     assert_post_state(json_state)
     assert_flash_display(2)
+
+@testcase
+def test_post_state_line_and_get_state():
+    assert_reset_state()
+    json_state = {"components": [
+        {
+            "type": "line",
+            "common_properties": { "x": 10, "y": 10, },
+            "delta_x": 1,
+            "delta_y": -5,
+            "stroke_width": 1,
+            "color": "#0022FF"
+        }
+    ]}
+    assert_post_state(json_state)
+    assert_get_state()
 
 
 

@@ -21,7 +21,8 @@ impl<Disp: GraphicsDisplay + Debug> StateWrapper<Disp> {
         Self { state: Some(s) }
     }
 
-    // f takes in existing state and should return next state.
+    /// Pass a closure to update the state.
+    /// f takes in existing state and should return next state.
     pub fn update<F>(&mut self, f: F)
     where
         F: FnOnce(State<Disp>) -> State<Disp>,
@@ -29,10 +30,23 @@ impl<Disp: GraphicsDisplay + Debug> StateWrapper<Disp> {
         self.state = Some(f(self.state.take().unwrap()));
     }
 
+    /// Pass a closure to update the display (if present).
+    /// If in Stopped state, does nothing.
+    pub fn update_display<F>(&mut self, f: F)
+    where
+        F: FnOnce(Disp) -> Disp,
+    {
+        self.update(|state| match state {
+            State::Stopped => {
+                log::warn!("Nothing to do for state update in state Stopped");
+                state
+            }
+            State::RenderingStatic { display } => State::RenderingStatic { display: f(display) },
+            State::RenderingDynamic { display } => State::RenderingDynamic { display: f(display) },
+        });
+    }
+
     pub fn get_ref(&self) -> &State<Disp> {
         self.state.as_ref().unwrap()
-    }
-    pub fn get_mut(&mut self) -> &State<Disp> {
-        self.state.as_mut().unwrap()
     }
 }

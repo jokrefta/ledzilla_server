@@ -5,7 +5,7 @@ pub use color::ColorSpec;
 pub use draw::ComponentDrawer;
 
 mod color;
-mod draw;
+pub mod draw;
 
 pub type ComponentList = Vec<Component>;
 

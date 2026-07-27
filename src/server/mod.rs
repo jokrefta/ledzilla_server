@@ -9,7 +9,7 @@ mod api;
 
 fn log_err_result<T, U: std::error::Error>(result: Result<T, U>) -> Result<T, U> {
     if let Err(ref e) = result {
-        warn!("Got error result - {}", e.to_string());
+        warn!("Got error result - {}", e);
     }
     result
 }

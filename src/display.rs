@@ -10,6 +10,7 @@ pub use simulator::SimulatorDisplayWrapper;
 pub trait GraphicsDisplay {
     type DrawTarget: embedded_graphics::draw_target::DrawTarget<Color = Rgb888, Error: Debug>;
 
+    /// Call this to get a canvas to draw onto, then call update_display
     fn get_draw_target(&mut self) -> &mut Self::DrawTarget;
 
     fn update_display(self) -> Self

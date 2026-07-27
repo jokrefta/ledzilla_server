@@ -10,8 +10,18 @@ where
     T: embedded_graphics::draw_target::DrawTarget<Color = Rgb888, Error: Debug>,
 {
     fn draw_next_frame(&mut self, target: &mut T);
-    // I just need the ability to get a copy for now. If we ever want to be able to 
     fn get_cloned_component(&self) -> super::Component;
+}
+
+pub fn into_drawer<T>(comp: super::Component) -> Box<dyn ComponentDrawer<T>>
+where
+    T: embedded_graphics::draw_target::DrawTarget<Color = Rgb888, Error: Debug>,
+{
+    match comp {
+        super::Component::Image(_image) => todo!(),
+        super::Component::Text(_text) => todo!(),
+        super::Component::Line(line) => Box::new(LineDrawer::from(line)),
+    }
 }
 
 pub struct LineDrawer {
@@ -22,8 +32,6 @@ impl<T> ComponentDrawer<T> for LineDrawer
 where
     T: embedded_graphics::draw_target::DrawTarget<Color = Rgb888, Error: Debug>,
 {
-    type Comp = super::Line;
-
     fn draw_next_frame(&mut self, target: &mut T) {
         let start = eg_geo::Point::new(
             self.component.common_properties.x.try_into().unwrap(),
@@ -32,7 +40,12 @@ where
         let delta = eg_geo::Point::new(self.component.delta_x, self.component.delta_y);
         eg_prim::Line::new(start, delta)
             .into_styled(eg_prim::PrimitiveStyle::with_stroke(Rgb888::WHITE, 2))
-            .draw(target);
+            .draw(target)
+            .unwrap();
+    }
+
+    fn get_cloned_component(&self) -> super::Component {
+        super::Component::Line(self.component.clone())
     }
 }
 
