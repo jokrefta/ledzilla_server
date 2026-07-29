@@ -17,6 +17,7 @@ def assert_get_info():
     print("  Response [{}]: {}".format(resp.status_code, resp.text))
     assert 200 == resp.status_code
 
+# requires manual inspection to ensure the components match what is expected
 def assert_get_state():
     print("Sending GET /state")
     resp = requests.get(API_ROOT + "state")
@@ -128,6 +129,78 @@ def test_post_state_line_and_get_state():
     ]}
     assert_post_state(json_state)
     assert_get_state()
+
+@testcase
+def test_post_state_multiple_lines():
+    assert_reset_state()
+    json_state = {"components": [
+        {
+            "type": "line",
+            "common_properties": { "x": 30, "y": 10, },
+            "delta_x": 80,
+            "delta_y": 0,
+            "stroke_width": 5,
+            "color": "#0022FF"
+        },
+        {
+            "type": "line",
+            "common_properties": { "x": 20, "y": 15, },
+            "delta_x": 80,
+            "delta_y": 0,
+            "stroke_width": 5,
+            "color": "#FF0022"
+        },
+        {
+            "type": "line",
+            "common_properties": { "x": 10, "y": 20, },
+            "delta_x": 80,
+            "delta_y": 0,
+            "stroke_width": 5,
+            "color": "#22FF00"
+        }
+    ]}
+    assert_post_state(json_state)
+    assert_flash_display(2)
+
+@testcase
+def test_post_state_multiple_lines_with_text():
+    assert_reset_state()
+    json_state = {"components": [
+        {
+            "type": "line",
+            "common_properties": { "x": 30, "y": 10, },
+            "delta_x": 80,
+            "delta_y": 0,
+            "stroke_width": 5,
+            "color": "#0022FF"
+        },
+        {
+            "type": "line",
+            "common_properties": { "x": 20, "y": 15, },
+            "delta_x": 80,
+            "delta_y": 0,
+            "stroke_width": 5,
+            "color": "#FF0022"
+        },
+        {
+            "type": "line",
+            "common_properties": { "x": 10, "y": 20, },
+            "delta_x": 80,
+            "delta_y": 0,
+            "stroke_width": 5,
+            "color": "#22FF00"
+        },
+        {
+            "type": "text",
+            "common_properties": { "x": 100, "y": 30, },
+            "content": "Hello world",
+            "font": { "typeface": "TODO", "size": 12},
+            "color": "#44AA44",
+            "alignment": "center"
+        }
+    ]}
+    assert_post_state(json_state)
+    assert_flash_display(2)
 
 
 

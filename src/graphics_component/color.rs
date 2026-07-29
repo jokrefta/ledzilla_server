@@ -5,21 +5,21 @@ use serde_with::{DeserializeFromStr, SerializeDisplay};
 
 #[derive(SerializeDisplay, DeserializeFromStr, Debug, PartialEq, Clone, Copy)]
 pub struct ColorSpec {
-    r: u32,
-    g: u32,
-    b: u32,
+    r: u8,
+    g: u8,
+    b: u8,
 }
 
 impl ColorSpec {
-    pub fn from_rgb(r: u32, g: u32, b: u32) -> Result<Self, String> {
-        if r < 256 && g < 256 && b < 256 {
-            Ok(Self { r, g, b })
-        } else {
-            Err("RGB value out of range".to_string())
-        }
+    pub fn try_from_rgb<T: TryInto<u8>>(r: T, g: T, b: T) -> Result<Self, T::Error> {
+        Ok(Self::from_rgb(r.try_into()?, g.try_into()?, b.try_into()?))
     }
 
-    pub fn as_rgb(&self) -> (u32, u32, u32) {
+    pub fn from_rgb(r: u8, g: u8, b: u8) -> Self {
+        Self { r, g, b }
+    }
+
+    pub fn as_rgb(&self) -> (u8, u8, u8) {
         (self.r, self.g, self.b)
     }
 }
@@ -42,9 +42,9 @@ impl FromStr for ColorSpec {
             return Err("Bad - does not start with #".to_string());
         }
 
-        if let Ok(r) = u32::from_str_radix(&s[1..=2], 16)
-            && let Ok(g) = u32::from_str_radix(&s[3..=4], 16)
-            && let Ok(b) = u32::from_str_radix(&s[5..=6], 16)
+        if let Ok(r) = u8::from_str_radix(&s[1..=2], 16)
+            && let Ok(g) = u8::from_str_radix(&s[3..=4], 16)
+            && let Ok(b) = u8::from_str_radix(&s[5..=6], 16)
         {
             Ok(Self { r, g, b })
         } else {
@@ -53,8 +53,8 @@ impl FromStr for ColorSpec {
     }
 }
 
-impl Into<Rgb888> for ColorSpec {
-    fn into(self) -> Rgb888 {
-        todo!()
+impl From<ColorSpec> for Rgb888 {
+    fn from(c: ColorSpec) -> Self {
+        Rgb888::new(c.r, c.g, c.b)
     }
 }

@@ -2,6 +2,7 @@ use embedded_graphics::pixelcolor::Rgb888;
 use embedded_graphics::prelude::RgbColor;
 use embedded_graphics::{Drawable, primitives as eg_prim};
 use embedded_graphics::{geometry as eg_geo, prelude::Primitive};
+use log::trace;
 
 use std::fmt::Debug;
 
@@ -38,8 +39,9 @@ where
             self.component.common_properties.y.try_into().unwrap(),
         );
         let delta = eg_geo::Point::new(self.component.delta_x, self.component.delta_y);
-        eg_prim::Line::new(start, delta)
-            .into_styled(eg_prim::PrimitiveStyle::with_stroke(Rgb888::WHITE, 2))
+        trace!("Drawing Line({}, {})", start, delta);
+        eg_prim::Line::with_delta(start, delta)
+            .into_styled(eg_prim::PrimitiveStyle::with_stroke(Rgb888::from(self.component.color), self.component.stroke_width))
             .draw(target)
             .unwrap();
     }
