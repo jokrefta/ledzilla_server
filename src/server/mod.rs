@@ -1,6 +1,6 @@
 use std::{fs::File, sync::mpsc::SyncSender};
 
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use rouille::{Request, Response, router, try_or_404};
 
 use crate::renderer;
@@ -10,6 +10,7 @@ mod api;
 fn log_err_result<T, U: std::error::Error>(result: Result<T, U>) -> Result<T, U> {
     if let Err(ref e) = result {
         warn!("Got error result - {}", e);
+        debug!(" -- error cause was {:?}", e.source());
     }
     result
 }

@@ -192,11 +192,11 @@ def test_post_state_multiple_lines_with_text():
         },
         {
             "type": "text",
-            "common_properties": { "x": 100, "y": 30, },
+            "common_properties": { "x": 100, "y": 40, },
             "content": "Hello world",
-            "font": { "typeface": "TODO", "size": 12},
+            "font": "mono_default_7x13_italic",
             "color": "#44AA44",
-            "alignment": "center"
+            "alignment": "Center"
         }
     ]}
     assert_post_state(json_state)

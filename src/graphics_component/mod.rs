@@ -1,10 +1,12 @@
 use serde::{Deserialize, Serialize};
-use serde_with::skip_serializing_none;
+use serde_with::{serde_as, skip_serializing_none};
 
 pub use color::ColorSpec;
+pub use font::Alignment;
 pub use draw::ComponentDrawer;
 
 mod color;
+mod font;
 pub mod draw;
 
 pub type ComponentList = Vec<Component>;
@@ -17,18 +19,15 @@ pub struct CommonProperties {
     pub scroll: Option<()>,
 }
 
-#[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
-pub struct Font {
-    pub typeface: String,
-    pub size: u32,
-}
+pub type Font = font::Font;
 
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
 pub struct Text {
     pub common_properties: CommonProperties,
     pub font: Font,
+    pub content: String,
     pub color: ColorSpec,
-    pub alignment: (),
+    pub alignment: Alignment,
 }
 
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
@@ -95,12 +94,9 @@ mod tests {
                 "y": 2
             },
             "content": "Hello World",
-            "font": {
-                "typeface": "Arial",
-                "size": 12
-            },
+            "font": "mono_default_5x7",
             "color": "#FF0001",
-            "alignment": null
+            "alignment": "Left"
         }"##;
 
         let as_rust = Component::Text(Text {
@@ -109,12 +105,10 @@ mod tests {
                 y: 2,
                 scroll: None,
             },
-            font: Font {
-                typeface: "Arial".to_string(),
-                size: 12,
-            },
-            color: ColorSpec::from_rgb(255, 0, 1).unwrap(),
-            alignment: (),
+            content: "Hello World".to_string(),
+            font: font::Font::mono_default_5x7,
+            color: ColorSpec::from_rgb(255, 0, 1),
+            alignment: Alignment::Left,
         });
 
         test_deserialization(as_json, &as_rust);
@@ -168,7 +162,7 @@ mod tests {
             delta_x: 5,
             delta_y: -8,
             stroke_width: 1,
-            color: ColorSpec::from_rgb(255, 0, 1).unwrap(),
+            color: ColorSpec::from_rgb(255, 0, 1),
         });
 
         test_deserialization(as_json, &as_rust);

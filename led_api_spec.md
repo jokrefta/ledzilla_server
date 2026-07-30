@@ -1,5 +1,5 @@
-API version: 0.1.0
-date: 2026-07-18
+API version: 0.2.0
+date: 2026-07-29
 
 # LEDzilla API
 
@@ -15,7 +15,8 @@ Returns display capabilities.
 {
   "width": 64,
   "height": 32,
-  "api_version": "0.1.0"
+  "api_version": "0.2.0",
+  "available_fonts": ["mono_default_4x6", "mono_default_5x7", ...],
 }
 ```
 
@@ -128,16 +129,17 @@ For most component types, the "x" and "y" values represent the position of the t
   "type": "text",
   "common_properties": {...},
   "content": "Hello World",
-  "font": {
-    "typeface": "Arial",
-    "size": 12
-  },
+  "font": "mono_default_7x13",
   "color": ...,
-  "alignment": ...,
+  "alignment": "Left",
 }
 ```
 
 For a text component, the positioning of the text relative to the provided "x" and "y" coordinates is given by the alignment property.
+
+Alignments may be "Left", "Center", "Right".
+
+A list of valid fonts may be retrieved from the INFO endpoint.
 
 ---
 
