@@ -1,5 +1,4 @@
 use embedded_graphics::pixelcolor::Rgb888;
-use embedded_graphics::prelude::RgbColor;
 use embedded_graphics::{Drawable, mono_font as eg_mono, primitives as eg_prim, text as eg_text};
 use embedded_graphics::{geometry as eg_geo, prelude::Primitive};
 use log::trace;
@@ -74,8 +73,10 @@ where
             self.component.common_properties.y.try_into().unwrap(),
         );
         trace!("Drawing Text(pos {})", pos);
-        let style =
-            eg_mono::MonoTextStyle::new(self.component.font.get_eg_font(), Rgb888::from(self.component.color));
+        let style = eg_mono::MonoTextStyle::new(
+            self.component.font.get_eg_font(),
+            Rgb888::from(self.component.color),
+        );
         eg_text::Text::with_alignment(
             &self.component.content,
             pos,

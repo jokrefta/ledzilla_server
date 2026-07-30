@@ -21,7 +21,7 @@ impl From<Alignment> for text::Alignment {
 use embedded_graphics::mono_font::ascii;
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Deserialize, Serialize, strum_macros::VariantNames)]
 pub enum Font {
     mono_default_4x6,
     mono_default_5x7,

@@ -119,6 +119,7 @@ All components share a `"common_properties"` object with these fields:
 ```
 
 "scroll" is optional and currently not supported.
+
 For most component types, the "x" and "y" values represent the position of the top-left corner of the component.
 
 ---

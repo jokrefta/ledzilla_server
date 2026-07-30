@@ -5,17 +5,19 @@ use std::{
 
 use log::trace;
 use rouille::{Request, Response, input::post::BufferedFile, post_input, try_or_400};
+use strum::VariantNames;
 
 use super::log_err_result;
 use crate::{graphics_component::ComponentList, renderer::Command};
 
-const API_VERSION: &str = "0.1.0";
+const API_VERSION: &str = "0.2.0";
 
 #[derive(serde::Serialize)]
 struct DisplayInfo {
     width: u32,
     height: u32,
     api_version: String,
+    available_fonts: &'static [&'static str],
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -68,15 +70,14 @@ pub fn handle_info_get() -> Response {
         width: 64 * 4,
         height: 64,
         api_version: API_VERSION.to_string(),
+        available_fonts: crate::graphics_component::Font::VARIANTS,
     })
 }
 
 pub fn handle_state_get(renderer: &SyncSender<Command>) -> Response {
     let (response_sender, response_receiver) = channel::<ComponentList>();
     trace!("sending get component state command");
-    renderer
-        .send(Command::GetComponents { response_sender })
-        .unwrap();
+    renderer.send(Command::GetComponents { response_sender }).unwrap();
 
     let components = response_receiver.recv().unwrap();
     trace!("got state response {:?}", components);

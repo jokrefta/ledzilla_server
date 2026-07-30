@@ -1,13 +1,13 @@
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, skip_serializing_none};
+use serde_with::skip_serializing_none;
 
 pub use color::ColorSpec;
-pub use font::Alignment;
 pub use draw::ComponentDrawer;
+pub use font::Alignment;
 
 mod color;
-mod font;
 pub mod draw;
+mod font;
 
 pub type ComponentList = Vec<Component>;
 

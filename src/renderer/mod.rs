@@ -126,7 +126,7 @@ where
                 (state, Command::SetComponents {response_sender, components}) => {
                     Self::set_components(&mut self.components, components, response_sender);
                     state
-                } 
+                }
                 // No default case - we want every command to be responded to.
             }
         });
