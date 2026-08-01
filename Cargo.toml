@@ -21,6 +21,7 @@ simple_logger = "5.2.0"
 strum = "0.28.0"
 strum_macros = "0.28.0"
 time = "0.3.53"
+toml = "1.1.4"
 
 [profile.release]
 lto = true
