@@ -1,0 +1,21 @@
+[general_config]
+use_sim = true
+
+[sim_config]
+width = 256
+height = 64
+
+[led_config]
+rows=64
+cols=64
+chain_length = 2
+num_chains = 2
+pwm_bits = 6
+pwm_lsb_ns = 140
+pwm_dither_bits = 0
+gpio_slowdown = 2
+
+pixel_mappers = ["ChainLink", "Rotate:180"]
+brightness = 40
+refresh_rate = 75
+

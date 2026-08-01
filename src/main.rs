@@ -1,30 +1,44 @@
+use std::process::ExitCode;
+
 #[cfg(feature = "simulator")]
 use embedded_graphics_simulator::{OutputSettingsBuilder, SimulatorDisplay, Window};
 
 use ledzilla_server::*;
-use log::info;
 
 use crate::config_parse::ConfigParser;
 
 mod config_parse;
 
-fn main() {
-    simple_logger::SimpleLogger::new()
+fn main() -> ExitCode {
+    if let Err(e) = simple_logger::SimpleLogger::new()
         .env()
         .with_local_timestamps()
         .with_timestamp_format(time::macros::format_description!("[hour]:[minute]:[second]"))
         .init()
-        .unwrap();
+    {
+        eprintln!("Failed to initialize logger! {}", e);
+        return ExitCode::FAILURE;
+    }
 
-    log::info!("Hello, world!");
+    log::error!("error logging enabled");
+    log::warn!("warn logging enabled");
+    log::info!("info logging enabled");
+    log::debug!("debug logging enabled");
+    log::trace!("trace logging enabled");
 
     let args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
         eprintln!("Usage: {} <config filename>", &args[0]);
-        return;
+        return ExitCode::FAILURE;
     }
 
-    let config_parser = ConfigParser::from_file(args[1].clone()).unwrap();
+    let config_parser = match ConfigParser::from_file(args[1].clone()) {
+        Ok(c) => c,
+        Err(e) => {
+            log::error!("{}", e);
+            return ExitCode::FAILURE;
+        }
+    };
     let gen_params = config_parser.get_general_config();
 
     if gen_params.use_sim {
@@ -39,7 +53,7 @@ fn main() {
         run_server(mk_led_display_provider(&config_parser), gen_params.server_port);
     }
 
-    return;
+    ExitCode::SUCCESS
 }
 
 /// Create the closure which the renderer may invoke as needed to generate a new simulator display.
@@ -58,7 +72,7 @@ fn mk_sim_display_provider(config: &ConfigParser) -> impl FnMut() -> display::Si
 
             let output_settings = OutputSettingsBuilder::new().scale(4).pixel_spacing(1).build();
 
-            info!("Creating simulator window");
+            log::info!("Creating simulator window");
             let mut window = Window::new("Test", &output_settings);
             window.set_max_fps(sim_config.target_fps);
 
@@ -82,7 +96,7 @@ fn mk_led_display_provider(config: &ConfigParser) -> impl FnMut() -> display::Le
         || {
             use ledzilla_server::display::LedDisplayWrapper;
 
-            info!("Creating led display");
+            log::info!("Creating led display");
             let led_config = config.get_led_config().unwrap();
             let (matrix, canvas) =
                 rpi_led_panel::RGBMatrix::new(led_config, 0).expect("Matrix initialization failed");
