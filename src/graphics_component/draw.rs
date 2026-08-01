@@ -34,8 +34,8 @@ where
 {
     fn draw_next_frame(&mut self, target: &mut T) {
         let start = eg_geo::Point::new(
-            self.component.common_properties.x.try_into().unwrap(),
-            self.component.common_properties.y.try_into().unwrap(),
+            self.component.common_properties.x,
+            self.component.common_properties.y,
         );
         let delta = eg_geo::Point::new(self.component.delta_x, self.component.delta_y);
         trace!("Drawing Line({}, {})", start, delta);
@@ -69,8 +69,8 @@ where
 {
     fn draw_next_frame(&mut self, target: &mut T) {
         let pos = eg_geo::Point::new(
-            self.component.common_properties.x.try_into().unwrap(),
-            self.component.common_properties.y.try_into().unwrap(),
+            self.component.common_properties.x,
+            self.component.common_properties.y,
         );
         trace!("Drawing Text(pos {})", pos);
         let style = eg_mono::MonoTextStyle::new(

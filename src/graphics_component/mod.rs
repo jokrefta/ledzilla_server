@@ -14,8 +14,8 @@ pub type ComponentList = Vec<Component>;
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
 #[skip_serializing_none]
 pub struct CommonProperties {
-    pub x: u32,
-    pub y: u32,
+    pub x: i32,
+    pub y: i32,
     pub scroll: Option<()>,
 }
 
