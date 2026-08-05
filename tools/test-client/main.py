@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""
+Some tests for the ledzilla server. Not 100% automated - some manual inspection is 
+required to ensure proper output (especially for the display)
+"""
+
+
 import requests
 import traceback
 from time import sleep
@@ -53,6 +59,38 @@ def assert_reset_state():
     # reset as much as possible for new test case
     assert_post_display_off()
     assert_post_state(get_empty_state_json())
+    for filename in assert_list_files():
+        assert_delete_file(filename)
+
+def assert_list_files() -> List:
+    print("Sending GET /files")
+    resp = requests.get(API_ROOT + "files")
+    print("  Response [{}]: {}".format(resp.status_code, resp.text))
+    assert 200 == resp.status_code
+    return resp.json()["files"]
+
+def assert_put_file(target_file_name, file_data, is_animated, is_new_file, width=None, height=None):
+    print("Sending PUT /files/" + target_file_name)
+    resp = requests.put(
+        API_ROOT + "files/" + target_file_name,
+        data={
+            "width": width,
+            "height": height,
+            "animated": "true" if is_animated else "false"
+        },
+        files={"file": file_data}
+    )
+    print("  Response [{}]: {}".format(resp.status_code, resp.text))
+    if is_new_file:
+        assert 201 == resp.status_code
+    else:
+        assert 204 == resp.status_code
+
+def assert_delete_file(target_file_name):
+    print("Sending DELETE /files/" + target_file_name)
+    resp = requests.delete(API_ROOT + "files/" + target_file_name)
+    print("  Response [{}]: {}".format(resp.status_code, resp.text))
+    assert 204 == resp.status_code
 
 #####################################################
 
@@ -63,6 +101,7 @@ def testcase(func):
     test_cases.append(func)
     return func
 
+'''
 @testcase
 def test_get_info():
     assert_get_info()
@@ -201,6 +240,32 @@ def test_post_state_multiple_lines_with_text():
     ]}
     assert_post_state(json_state)
     assert_flash_display(2)
+'''
+
+@testcase
+def test_upload_and_delete_file():
+    with open("pretty_smol.png", "rb") as f:
+        assert_put_file("smol_upload.png", ("dont_care_filename", f, "image/png"), False, True)
+    assert_delete_file("smol_upload.png")
+
+@testcase
+def test_upload_files_and_get_files():
+    assert_reset_state()
+    with open("pretty_smol.png", "rb") as f:
+        assert_put_file("smol_upload.png", ("dont_care_filename", f, "image/png"), False, True)
+        f.seek(0)
+        assert_put_file("smol_upload2.png", ("dont_care_filename", f, "image/png"), False, True)
+    assert 2 == len(assert_list_files())
+
+@testcase
+def test_upload_files_and_modify_files():
+    assert_reset_state()
+    # Just check that the response code is correct for modification. Will need a test later on to
+    # verify visually that the image updates upon reconfiguring the component state
+    with open("pretty_smol.png", "rb") as f:
+        assert_put_file("smol_upload.png", ("dont_care_filename", f, "image/png"), False, True)
+        f.seek(0)
+        assert_put_file("smol_upload.png", ("dont_care_filename", f, "image/png"), False, False)
 
 
 

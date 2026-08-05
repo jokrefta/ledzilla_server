@@ -1,29 +1,43 @@
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 use display::GraphicsDisplay;
 use renderer::Renderer;
 
-use crate::renderer::Command;
+use crate::{renderer::Command, upload::UploadManager};
 
 pub mod display;
 mod graphics_component;
 mod renderer;
 mod server;
+mod upload;
 
-pub fn run_server<Disp, F>(display_provider: F, port: u16)
+pub fn run_server<Disp, F>(display_provider: F, port: u16) -> !
 where
-    F: Send + FnMut() -> Disp,
+    F: Send + FnMut() -> Disp + 'static,
     Disp: GraphicsDisplay + std::fmt::Debug,
 {
     let (snd, rcv) = std::sync::mpsc::sync_channel::<Command>(2);
     let ip_port = format!("{}:{}", "127.0.0.1", port);
 
-    thread::scope(|s| {
-        s.spawn(|| {
-            let mut renderer = Renderer::new(display_provider);
+    let upload_manager = Arc::new(Mutex::new(UploadManager::new()));
+
+    {
+        let upload_manager_clone = upload_manager.clone();
+        thread::spawn(move || {
+            let mut renderer = Renderer::new(display_provider, upload_manager_clone);
             renderer.run(rcv);
         });
 
-        rouille::start_server(ip_port, move |req| server::handle_request(snd.clone(), req));
-    });
+        let upload_manager_clone = upload_manager.clone();
+        rouille::start_server(ip_port, move |req| {
+            server::handle_request(
+                snd.clone(),
+                req,
+                // Must clone again because this closure must implement Fn,
+                // i.e. must be callable many times
+                upload_manager_clone.clone(),
+            )
+        });
+    }
 }

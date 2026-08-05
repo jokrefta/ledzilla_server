@@ -1,12 +1,13 @@
-use crate::graphics_component;
 use crate::renderer::state::{State, StateWrapper};
 use crate::{
     display::GraphicsDisplay,
     graphics_component::{ComponentDrawer, ComponentList},
 };
+use crate::{graphics_component, upload};
 use log::debug;
 use std::fmt::Debug;
 use std::sync::mpsc::{Receiver, Sender};
+use std::sync::{Arc, Mutex};
 
 mod state;
 
@@ -35,8 +36,8 @@ where
     display_provider: F,
     // Should always be valid, but is Option so we can move out of &mut self
     state: StateWrapper<Disp>,
-    // components: ComponentList,
     components: Vec<Box<dyn ComponentDrawer<Disp::DrawTarget>>>,
+    upload_manager: Arc<Mutex<upload::UploadManager>>,
 }
 
 impl<F, Disp> Renderer<F, Disp>
@@ -44,11 +45,12 @@ where
     F: FnMut() -> Disp,
     Disp: GraphicsDisplay + Debug,
 {
-    pub fn new(display_provider: F) -> Self {
+    pub fn new(display_provider: F, upload_manager: Arc<Mutex<upload::UploadManager>>) -> Self {
         Self {
             display_provider,
             state: StateWrapper::new(State::Stopped),
             components: Vec::new(),
+            upload_manager,
         }
     }
 

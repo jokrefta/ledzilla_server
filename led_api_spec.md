@@ -1,5 +1,5 @@
-API version: 0.2.0
-date: 2026-07-29
+API version: 0.3.0
+date: 2026-08-04
 
 # LEDzilla API
 
@@ -59,25 +59,22 @@ Turns the display off. Stops the refresh loop. State is preserved.
 
 ---
 
-## POST /files
+## PUT /files/\<name\>
 Upload a file. Server processes and stores it synchronously.
 Request is `multipart/form-data`. Response may be delayed for large files.
+If a file with the given name already exists, it is replaced.
 
 **Fields:**
 - `file` (required): the file to upload
-- `name` (required): the name to store the file under
+- `animated` (required): true or false
 - `width` (optional): target width in pixels
 - `height` (optional): target height in pixels
-- If only one dimension is given, aspect ratio is maintained.
-- If both are given, image is stretched to fit exactly.
-- If neither is given, the file is stored at its original dimensions.
+  - If only one dimension is given, aspect ratio is maintained.
+  - If both are given, image is stretched to fit exactly.
+  - If neither is given, the file is stored at its original dimensions.
 
 **Response:**
-- `201 Created` with header `Location: /api/files/<name>`
-  and body:
-  ```json
-  { "name": "<name>" }
-  ```
+- `201 Created` (for new image) or `204 No Content` (for updating an existing image) on success
 - `400 Bad Request` if file is invalid or unsupported format
 
 ---

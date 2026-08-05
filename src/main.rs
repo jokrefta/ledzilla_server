@@ -12,6 +12,7 @@ mod config_parse;
 fn main() -> ExitCode {
     if let Err(e) = simple_logger::SimpleLogger::new()
         .env()
+        .with_module_level("multipart", log::LevelFilter::Warn)
         .with_local_timestamps()
         .with_timestamp_format(time::macros::format_description!("[hour]:[minute]:[second]"))
         .init()
@@ -59,13 +60,13 @@ fn main() -> ExitCode {
 /// Create the closure which the renderer may invoke as needed to generate a new simulator display.
 /// The returned closure captures a reference to `config`, so may only be used while `config` is valid.
 #[cfg(feature = "simulator")]
-fn mk_sim_display_provider(config: &ConfigParser) -> impl FnMut() -> display::SimulatorDisplayWrapper {
+fn mk_sim_display_provider(config: &ConfigParser) -> impl FnMut() -> display::SimulatorDisplayWrapper + use<> {
     {
-        || {
+        let sim_config = config.get_sim_config();
+        move || {
             use ledzilla_server::display::GraphicsDisplay;
             type Color = embedded_graphics::pixelcolor::Rgb888;
 
-            let sim_config = config.get_sim_config();
             let canvas: SimulatorDisplay<Color> = SimulatorDisplay::new(
                 embedded_graphics::geometry::Size::new(sim_config.width, sim_config.height),
             );
@@ -87,13 +88,14 @@ fn mk_sim_display_provider(config: &ConfigParser) -> impl FnMut() -> display::Si
 /// Create the closure which the renderer may invoke as needed to generate a new LED matrix display.
 /// The returned closure captures a reference to `config`, so may only be used while `config` is valid.
 #[cfg(feature = "led")]
-fn mk_led_display_provider(config: &ConfigParser) -> impl FnMut() -> display::LedDisplayWrapper {
+fn mk_led_display_provider(config: &ConfigParser) -> impl FnMut() -> display::LedDisplayWrapper + use<> {
     #[cfg(not(feature = "led"))]
     panic!("Not compiled with led support!");
 
     #[cfg(feature = "led")]
     {
-        || {
+        let config = config.clone(); // Avoid lifetime issues (the returned closure sneeds to be valid for 'static)
+        move || {
             use ledzilla_server::display::LedDisplayWrapper;
 
             log::info!("Creating led display");

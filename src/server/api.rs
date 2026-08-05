@@ -1,16 +1,23 @@
 use std::{
     io::Read,
-    sync::mpsc::{SyncSender, channel},
+    sync::{
+        Mutex,
+        mpsc::{SyncSender, channel},
+    },
 };
 
-use log::trace;
+use log::{debug, trace};
 use rouille::{Request, Response, input::post::BufferedFile, post_input, try_or_400};
 use strum::VariantNames;
 
 use super::log_err_result;
-use crate::{graphics_component::ComponentList, renderer::Command};
+use crate::{
+    graphics_component::ComponentList,
+    renderer::Command,
+    upload::{AnimatedImageBuf, ImageBuf, UploadManager, UploadedAsset},
+};
 
-const API_VERSION: &str = "0.2.0";
+const API_VERSION: &str = "0.3.0";
 
 #[derive(serde::Serialize)]
 struct DisplayInfo {
@@ -18,6 +25,11 @@ struct DisplayInfo {
     height: u32,
     api_version: String,
     available_fonts: &'static [&'static str],
+}
+
+#[derive(serde::Serialize)]
+struct FilesList<'a> {
+    files: Vec<&'a str>,
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -124,4 +136,47 @@ pub fn handle_display_off(renderer: &SyncSender<Command>) -> Response {
     trace!("got display stop response");
 
     Response::empty_204()
+}
+
+pub fn handle_files_get(upload_manager: &Mutex<UploadManager>) -> Response {
+    let upload_manager = upload_manager.lock().unwrap();
+    let files = upload_manager.list_files();
+    Response::json(&FilesList { files })
+}
+
+pub fn handle_upload(req: &Request, filename: String, upload_manager: &Mutex<UploadManager>) -> Response {
+    let input = try_or_400!(post_input!(req, {
+        width: Option<u32>,
+        height: Option<u32>,
+        // bool means something special in post_input!, so capture as a string and convert later
+        animated: String,
+        file: BufferedFile,
+    }));
+    let is_animated = input.animated.trim().eq_ignore_ascii_case("true");
+    debug!(
+        "File upload request, width={:?} height={:?} animated='{}' ({})",
+        input.width, input.height, input.animated, is_animated
+    );
+
+    let asset = if is_animated {
+        UploadedAsset::AnimatedImage(AnimatedImageBuf::from_encoded_buffer(input.file.data))
+    } else {
+        UploadedAsset::Image(ImageBuf::from_encoded_buffer(input.file.data))
+    };
+
+    let mut upload_manager = upload_manager.lock().unwrap();
+    match upload_manager.insert(filename, asset) {
+        // Special 201 code indicates new resource created; otherwise use 204
+        Some(_) => Response::empty_204(),
+        None => Response::text("Created ".to_string() + req.raw_url()).with_status_code(201),
+    }
+}
+
+pub fn handle_delete_file(name: &str, upload_manager: &Mutex<UploadManager>) -> Response {
+    let mut upload_manager = upload_manager.lock().unwrap();
+    if let Ok(_) = { upload_manager.try_delete(name) } {
+        Response::empty_204()
+    } else {
+        Response::empty_404()
+    }
 }

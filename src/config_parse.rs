@@ -3,7 +3,7 @@ use serde::Deserialize;
 #[cfg(feature = "led")]
 use rpi_led_panel::RGBMatrixConfig;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConfigParser {
     parsed_config: ParsedConfig,
 }
