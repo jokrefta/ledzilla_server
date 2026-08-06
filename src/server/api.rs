@@ -1,3 +1,4 @@
+use anyhow::Result;
 use std::{
     io::Read,
     sync::{
@@ -13,7 +14,7 @@ use strum::VariantNames;
 use super::log_err_result;
 use crate::{
     graphics_component::ComponentList,
-    renderer::Command,
+    renderer::{Command, CommandError},
     upload::{AnimatedImageBuf, ImageBuf, UploadManager, UploadedAsset},
 };
 
@@ -98,7 +99,7 @@ pub fn handle_state_get(renderer: &SyncSender<Command>) -> Response {
 
 pub fn handle_state_post(req: &Request, renderer: &SyncSender<Command>) -> Response {
     let state: ComponentState = try_or_400!(log_err_result(json_input(req)));
-    let (response_sender, response_receiver) = channel::<bool>();
+    let (response_sender, response_receiver) = channel::<Result<(), CommandError>>();
     renderer
         .send(Command::SetComponents {
             components: state.components,
@@ -106,11 +107,11 @@ pub fn handle_state_post(req: &Request, renderer: &SyncSender<Command>) -> Respo
         })
         .unwrap();
 
-    if !response_receiver.recv().unwrap() {
-        panic!("Failed to write display components");
+    match response_receiver.recv().unwrap() {
+        Ok(_) => Response::empty_204(),
+        Err(CommandError::InternalServerError(s)) => panic!("Failed to set components - {}", s),
+        Err(CommandError::UserInputError(s)) => Response::text(s).with_status_code(400),
     }
-    trace!("got display start response");
-    Response::empty_204()
 }
 
 pub fn handle_display_on(renderer: &SyncSender<Command>) -> Response {

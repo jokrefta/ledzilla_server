@@ -1,15 +1,36 @@
-use crate::renderer::state::{State, StateWrapper};
+use self::state::{State, StateWrapper};
 use crate::{
     display::GraphicsDisplay,
+    graphics_component::draw,
     graphics_component::{ComponentDrawer, ComponentList},
+    upload,
 };
-use crate::{graphics_component, upload};
+
+use anyhow::Result;
 use log::debug;
 use std::fmt::Debug;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
+use thiserror::Error;
 
 mod state;
+
+#[derive(Debug, Error)]
+pub enum CommandError {
+    #[error("Internal error: {0}")]
+    InternalServerError(String),
+    #[error("Bad user input. {0}")]
+    UserInputError(String),
+}
+
+impl From<draw::DrawerCreationError> for CommandError {
+    fn from(e: draw::DrawerCreationError) -> Self {
+        match e {
+            draw::DrawerCreationError::BadComponentSpec(s) => Self::UserInputError(s),
+            draw::DrawerCreationError::_GeneralError(s) => Self::InternalServerError(s),
+        }
+    }
+}
 
 #[derive(Debug)]
 pub enum Command {
@@ -24,7 +45,7 @@ pub enum Command {
     },
     SetComponents {
         components: ComponentList,
-        response_sender: Sender<bool>,
+        response_sender: Sender<Result<(), CommandError>>,
     },
 }
 
@@ -78,7 +99,7 @@ where
                     .update_display(|display| Self::render(&mut self.components, display));
                 command_receiver.recv().unwrap()
             }
-            State::RenderingDynamic { .. } => {
+            State::_RenderingDynamic { .. } => {
                 loop {
                     // Early return if command found
                     match command_receiver.try_recv() {
@@ -111,11 +132,11 @@ where
                     State::Stopped
                 }
                 //__________________________________________________
-                (State::RenderingStatic {..} | State::RenderingDynamic {..}, Command::Stop {response_sender}) => {
+                (State::RenderingStatic {..} | State::_RenderingDynamic {..}, Command::Stop {response_sender}) => {
                     Self::shut_down(response_sender)
                 }
                 //__________________________________________________
-                (state @ (State::RenderingStatic {..} | State::RenderingDynamic {..}), Command::Start {response_sender}) => {
+                (state @ (State::RenderingStatic {..} | State::_RenderingDynamic {..}), Command::Start {response_sender}) => {
                     response_sender.send(true).unwrap();
                     state
                 }
@@ -126,7 +147,7 @@ where
                 }
                 //__________________________________________________
                 (state, Command::SetComponents {response_sender, components}) => {
-                    Self::set_components(&mut self.components, components, response_sender);
+                    Self::set_components(&mut self.components, components, response_sender, &*self.upload_manager);
                     state
                 }
                 // No default case - we want every command to be responded to.
@@ -167,14 +188,27 @@ where
     fn set_components(
         to_update: &mut Vec<Box<dyn ComponentDrawer<Disp::DrawTarget>>>,
         new_components: ComponentList,
-        success_sender: Sender<bool>,
+        success_sender: Sender<Result<(), CommandError>>,
+        upload_manager: &Mutex<upload::UploadManager>,
     ) {
         debug!("Changing components. New size: {}", new_components.len());
-        *to_update = new_components
-            .into_iter()
-            .map(|a| graphics_component::draw::into_drawer(a))
-            .collect();
-        success_sender.send(true).unwrap();
+        type DynComponentDrawerList<T> = Vec<Box<dyn ComponentDrawer<T>>>;
+
+        // Transform the list of component descriptions into a list of component drawers. These drawers hold
+        // all the info from the original component description, but also hold state needed for rendering
+        let new_drawers: Result<DynComponentDrawerList<Disp::DrawTarget>, draw::DrawerCreationError> =
+            new_components
+                .into_iter()
+                .map(|a| draw::into_drawer(a, upload_manager))
+                .collect();
+
+        match new_drawers {
+            Ok(drawers) => {
+                *to_update = drawers;
+                success_sender.send(Ok(())).unwrap()
+            }
+            Err(e) => success_sender.send(Err(e.into())).unwrap(),
+        };
     }
 
     /// Extract copies of the graphics components into a ComponentList and send it

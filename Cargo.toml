@@ -9,6 +9,7 @@ simulator = ["dep:embedded-graphics-simulator"]
 led = ["dep:rpi-led-panel"]
 
 [dependencies]
+anyhow = "1.0.104"
 embedded-graphics = "0.8.2"
 embedded-graphics-simulator = { version = "0.8.0", optional = true }
 image = { version = "0.25.10", default-features = false, features = [
@@ -31,6 +32,7 @@ serde_with = "3.21.0"
 simple_logger = "5.2.0"
 strum = "0.28.0"
 strum_macros = "0.28.0"
+thiserror = "2.0.19"
 time = "0.3.53"
 toml = "1.1.4"
 

@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, Mutex, mpsc::SyncSender},
 };
 
-use log::{debug, error, info, trace, warn};
+use log::{debug, error, info, warn};
 use rouille::{Request, Response, router, try_or_404};
 
 use crate::{renderer, upload::UploadManager};

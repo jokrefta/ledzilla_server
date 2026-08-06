@@ -9,10 +9,13 @@ import requests
 import traceback
 from time import sleep
 from typing import List, Callable
+from pathlib import Path
 import termcolor
 
 SERVER_ROOT = "http://127.0.0.1:8080/"
 API_ROOT = SERVER_ROOT + "api/"
+
+CURRENT_DIR = Path(__file__).parent.resolve()
 
 def get_empty_state_json():
     return {"components": []}
@@ -49,11 +52,14 @@ def assert_flash_display(seconds):
     assert_post_display_off()
 
 
-def assert_post_state(state_json):
+def assert_post_state(state_json, is_valid=True):
     print("Sending POST /state")
     resp = requests.post(API_ROOT + "state", json=state_json)
     print("  Response [{}]: {}".format(resp.status_code, resp.text))
-    assert 204 == resp.status_code
+    if is_valid:
+        assert 204 == resp.status_code
+    else:
+        assert 400 == resp.status_code
 
 def assert_reset_state():
     # reset as much as possible for new test case
@@ -244,14 +250,14 @@ def test_post_state_multiple_lines_with_text():
 
 @testcase
 def test_upload_and_delete_file():
-    with open("pretty_smol.png", "rb") as f:
+    with open(CURRENT_DIR/"pretty_smol.png", "rb") as f:
         assert_put_file("smol_upload.png", ("dont_care_filename", f, "image/png"), False, True)
     assert_delete_file("smol_upload.png")
 
 @testcase
 def test_upload_files_and_get_files():
     assert_reset_state()
-    with open("pretty_smol.png", "rb") as f:
+    with open(CURRENT_DIR/"pretty_smol.png", "rb") as f:
         assert_put_file("smol_upload.png", ("dont_care_filename", f, "image/png"), False, True)
         f.seek(0)
         assert_put_file("smol_upload2.png", ("dont_care_filename", f, "image/png"), False, True)
@@ -262,10 +268,40 @@ def test_upload_files_and_modify_files():
     assert_reset_state()
     # Just check that the response code is correct for modification. Will need a test later on to
     # verify visually that the image updates upon reconfiguring the component state
-    with open("pretty_smol.png", "rb") as f:
+    with open(CURRENT_DIR/"pretty_smol.png", "rb") as f:
         assert_put_file("smol_upload.png", ("dont_care_filename", f, "image/png"), False, True)
         f.seek(0)
         assert_put_file("smol_upload.png", ("dont_care_filename", f, "image/png"), False, False)
+
+@testcase
+def test_draw_image():
+    assert_reset_state()
+
+    with open(CURRENT_DIR/"pretty_smol.png", "rb") as f:
+        assert_put_file("smol_upload.png", ("dont_care_filename", f, "image/png"), False, True)
+
+    json_state = {"components": [
+        {
+            "type": "image",
+            "common_properties": { "x": 30, "y": 10, },
+            "source": "smol_upload.png"
+        }
+    ]}
+    assert_post_state(json_state)
+    assert_flash_display(2)
+
+@testcase
+def test_draw_image_nonexistent_file():
+    assert_reset_state()
+    json_state = {"components": [
+        {
+            "type": "image",
+            "common_properties": { "x": 30, "y": 10, },
+            "source": "nonexistent.png"
+        }
+    ]}
+    assert_post_state(json_state, False)
+    assert_flash_display(2)
 
 
 

@@ -5,8 +5,6 @@
 
 use std::{collections::BTreeMap, sync::Arc};
 
-use log::trace;
-
 #[derive(Debug)]
 pub enum UploadedAsset {
     Image(ImageBuf),
