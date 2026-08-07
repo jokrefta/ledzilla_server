@@ -32,6 +32,7 @@ impl ImageBuf {
         self.image.width()
     }
 
+    #[allow(dead_code)]
     pub fn get_height(&self) -> u32 {
         self.image.height()
     }
@@ -83,7 +84,7 @@ impl AnimatedImageBuf {
                 //TODO get rid of unwrap
                 let frames = decoder.into_frames().collect_frames().unwrap();
                 Self {
-                    frames: frames.into_iter().map(|x| RgbFrame::from(x)).collect(),
+                    frames: frames.into_iter().map(RgbFrame::from).collect(),
                 }
             }
             Ok(_) => todo!("Handle unsupported animated image type"),
@@ -95,6 +96,7 @@ impl AnimatedImageBuf {
         self.frames[0].img.width()
     }
 
+    #[allow(dead_code)]
     pub fn get_height(&self) -> u32 {
         self.frames[0].img.height()
     }

@@ -178,7 +178,7 @@ pub fn handle_upload(req: &Request, filename: String, upload_manager: &Mutex<Upl
 
 pub fn handle_delete_file(name: &str, upload_manager: &Mutex<UploadManager>) -> Response {
     let mut upload_manager = upload_manager.lock().unwrap();
-    if let Ok(_) = { upload_manager.try_delete(name) } {
+    if upload_manager.try_delete(name).is_ok() {
         Response::empty_204()
     } else {
         Response::empty_404()

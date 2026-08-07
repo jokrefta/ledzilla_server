@@ -152,7 +152,7 @@ where
                         &mut self.components,
                         components,
                         response_sender,
-                        &*self.upload_manager,
+                        &self.upload_manager,
                         state
                     )
                 }

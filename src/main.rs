@@ -54,7 +54,8 @@ fn main() -> ExitCode {
         run_server(mk_led_display_provider(&config_parser), gen_params.server_port);
     }
 
-    ExitCode::SUCCESS
+    // Server will run forever, so commenting this
+    // ExitCode::SUCCESS
 }
 
 /// Create the closure which the renderer may invoke as needed to generate a new simulator display.
