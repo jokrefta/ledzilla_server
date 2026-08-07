@@ -21,25 +21,45 @@ pub enum DrawerCreationError {
 }
 
 // Draw-er as in "one who draws", not the furniture
-pub trait ComponentDrawer<T>
-where
-    T: embedded_graphics::draw_target::DrawTarget<Color = Rgb888, Error: Debug>,
-{
-    fn draw_next_frame(&mut self, target: &mut T);
-    fn get_cloned_component(&self) -> super::Component;
+// TODO maybe box to reduce enum size? Idk probably unneeded, should probably profile first or something
+pub enum ComponentDrawer {
+    Image(ImageDrawer),
+    Line(LineDrawer),
+    Text(TextDrawer),
 }
 
-pub fn into_drawer<T>(
+impl ComponentDrawer {
+    pub fn draw_next_frame<T>(&mut self, target: &mut T)
+    where
+        T: embedded_graphics::draw_target::DrawTarget<Color = Rgb888, Error: Debug>,
+    {
+        match self {
+            ComponentDrawer::Image(drawer) => drawer.draw_next_frame(target),
+            ComponentDrawer::Line(drawer) => drawer.draw_next_frame(target),
+            ComponentDrawer::Text(drawer) => drawer.draw_next_frame(target),
+        }
+    }
+
+    pub fn get_cloned_component(&self) -> super::Component {
+        match self {
+            ComponentDrawer::Image(drawer) => drawer.get_cloned_component(),
+            ComponentDrawer::Line(drawer) => drawer.get_cloned_component(),
+            ComponentDrawer::Text(drawer) => drawer.get_cloned_component(),
+        }
+    }
+}
+
+pub fn into_drawer(
     comp: super::Component,
     upload_manager: &Mutex<upload::UploadManager>,
-) -> Result<Box<dyn ComponentDrawer<T>>, DrawerCreationError>
-where
-    T: embedded_graphics::draw_target::DrawTarget<Color = Rgb888, Error: Debug>,
-{
+) -> Result<ComponentDrawer, DrawerCreationError> {
     match comp {
-        super::Component::Image(image) => Ok(Box::new(ImageDrawer::try_from_component(image, upload_manager)?)),
-        super::Component::Text(text) => Ok(Box::new(TextDrawer::from(text))),
-        super::Component::Line(line) => Ok(Box::new(LineDrawer::from(line))),
+        super::Component::Image(image) => Ok(ComponentDrawer::Image(ImageDrawer::try_from_component(
+            image,
+            upload_manager,
+        )?)),
+        super::Component::Text(text) => Ok(ComponentDrawer::Text(TextDrawer::from(text))),
+        super::Component::Line(line) => Ok(ComponentDrawer::Line(LineDrawer::from(line))),
     }
 }
 
@@ -47,11 +67,11 @@ pub struct LineDrawer {
     component: super::Line,
 }
 
-impl<T> ComponentDrawer<T> for LineDrawer
-where
-    T: embedded_graphics::draw_target::DrawTarget<Color = Rgb888, Error: Debug>,
-{
-    fn draw_next_frame(&mut self, target: &mut T) {
+impl LineDrawer {
+    pub fn draw_next_frame<T>(&mut self, target: &mut T)
+    where
+        T: embedded_graphics::draw_target::DrawTarget<Color = Rgb888, Error: Debug>,
+    {
         let start = eg_geo::Point::new(
             self.component.common_properties.x,
             self.component.common_properties.y,
@@ -67,7 +87,7 @@ where
             .unwrap();
     }
 
-    fn get_cloned_component(&self) -> super::Component {
+    pub fn get_cloned_component(&self) -> super::Component {
         super::Component::Line(self.component.clone())
     }
 }
@@ -82,11 +102,11 @@ pub struct TextDrawer {
     component: super::Text,
 }
 
-impl<T> ComponentDrawer<T> for TextDrawer
-where
-    T: embedded_graphics::draw_target::DrawTarget<Color = Rgb888, Error: Debug>,
-{
-    fn draw_next_frame(&mut self, target: &mut T) {
+impl TextDrawer {
+    pub fn draw_next_frame<T>(&mut self, target: &mut T)
+    where
+        T: embedded_graphics::draw_target::DrawTarget<Color = Rgb888, Error: Debug>,
+    {
         let pos = eg_geo::Point::new(
             self.component.common_properties.x,
             self.component.common_properties.y,
@@ -106,7 +126,7 @@ where
         .unwrap();
     }
 
-    fn get_cloned_component(&self) -> super::Component {
+    pub fn get_cloned_component(&self) -> super::Component {
         super::Component::Text(self.component.clone())
     }
 }
@@ -122,11 +142,11 @@ pub struct ImageDrawer {
     image_data: Arc<upload::UploadedAsset>,
 }
 
-impl<T> ComponentDrawer<T> for ImageDrawer
-where
-    T: embedded_graphics::draw_target::DrawTarget<Color = Rgb888, Error: Debug>,
-{
-    fn draw_next_frame(&mut self, target: &mut T) {
+impl ImageDrawer {
+    pub fn draw_next_frame<T>(&mut self, target: &mut T)
+    where
+        T: embedded_graphics::draw_target::DrawTarget<Color = Rgb888, Error: Debug>,
+    {
         let pos = eg_geo::Point::new(
             self.component.common_properties.x,
             self.component.common_properties.y,
@@ -144,7 +164,7 @@ where
         image.draw(target).unwrap();
     }
 
-    fn get_cloned_component(&self) -> super::Component {
+    pub fn get_cloned_component(&self) -> super::Component {
         super::Component::Image(self.component.clone())
     }
 }

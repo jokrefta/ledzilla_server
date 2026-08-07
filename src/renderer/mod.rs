@@ -57,7 +57,7 @@ where
     display_provider: F,
     // Should always be valid, but is Option so we can move out of &mut self
     state: StateWrapper<Disp>,
-    components: Vec<Box<dyn ComponentDrawer<Disp::DrawTarget>>>,
+    components: Vec<ComponentDrawer>,
     upload_manager: Arc<Mutex<upload::UploadManager>>,
 }
 
@@ -174,7 +174,7 @@ where
     }
 
     /// Take the display, draw onto it, update it, and return it back.
-    fn render(components: &mut Vec<Box<dyn ComponentDrawer<Disp::DrawTarget>>>, mut display: Disp) -> Disp {
+    fn render(components: &mut Vec<ComponentDrawer>, mut display: Disp) -> Disp {
         debug!("rendering");
         let canvas = display.get_draw_target();
         for drawer in components {
@@ -186,21 +186,19 @@ where
 
     /// Update the given components and send a true response on the channel.
     fn set_components(
-        to_update: &mut Vec<Box<dyn ComponentDrawer<Disp::DrawTarget>>>,
+        to_update: &mut Vec<ComponentDrawer>,
         new_components: ComponentList,
         success_sender: Sender<Result<(), CommandError>>,
         upload_manager: &Mutex<upload::UploadManager>,
     ) {
         debug!("Changing components. New size: {}", new_components.len());
-        type DynComponentDrawerList<T> = Vec<Box<dyn ComponentDrawer<T>>>;
 
         // Transform the list of component descriptions into a list of component drawers. These drawers hold
         // all the info from the original component description, but also hold state needed for rendering
-        let new_drawers: Result<DynComponentDrawerList<Disp::DrawTarget>, draw::DrawerCreationError> =
-            new_components
-                .into_iter()
-                .map(|a| draw::into_drawer(a, upload_manager))
-                .collect();
+        let new_drawers: Result<Vec<ComponentDrawer>, draw::DrawerCreationError> = new_components
+            .into_iter()
+            .map(|a| draw::into_drawer(a, upload_manager))
+            .collect();
 
         match new_drawers {
             Ok(drawers) => {
@@ -213,10 +211,7 @@ where
 
     /// Extract copies of the graphics components into a ComponentList and send it
     /// on the channel
-    fn get_components(
-        component_drawers: &Vec<Box<dyn ComponentDrawer<Disp::DrawTarget>>>,
-        response_sender: Sender<ComponentList>,
-    ) {
+    fn get_components(component_drawers: &Vec<ComponentDrawer>, response_sender: Sender<ComponentList>) {
         response_sender
             .send(
                 component_drawers
