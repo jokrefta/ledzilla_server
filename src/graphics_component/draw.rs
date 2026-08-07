@@ -34,17 +34,25 @@ impl ComponentDrawer {
         T: embedded_graphics::draw_target::DrawTarget<Color = Rgb888, Error: Debug>,
     {
         match self {
-            ComponentDrawer::Image(drawer) => drawer.draw_next_frame(target),
-            ComponentDrawer::Line(drawer) => drawer.draw_next_frame(target),
-            ComponentDrawer::Text(drawer) => drawer.draw_next_frame(target),
+            Self::Image(drawer) => drawer.draw_next_frame(target),
+            Self::Line(drawer) => drawer.draw_next_frame(target),
+            Self::Text(drawer) => drawer.draw_next_frame(target),
         }
     }
 
     pub fn get_cloned_component(&self) -> super::Component {
         match self {
-            ComponentDrawer::Image(drawer) => drawer.get_cloned_component(),
-            ComponentDrawer::Line(drawer) => drawer.get_cloned_component(),
-            ComponentDrawer::Text(drawer) => drawer.get_cloned_component(),
+            Self::Image(drawer) => drawer.get_cloned_component(),
+            Self::Line(drawer) => drawer.get_cloned_component(),
+            Self::Text(drawer) => drawer.get_cloned_component(),
+        }
+    }
+
+    pub fn is_static(&self) -> bool {
+        match self {
+            Self::Image(drawer) => drawer.is_static(),
+            Self::Line(drawer) => drawer.is_static(),
+            Self::Text(drawer) => drawer.is_static(),
         }
     }
 }
@@ -90,6 +98,10 @@ impl LineDrawer {
     pub fn get_cloned_component(&self) -> super::Component {
         super::Component::Line(self.component.clone())
     }
+
+    pub fn is_static(&self) -> bool {
+        true // Once we support animated components, this will change
+    }
 }
 
 impl From<super::Line> for LineDrawer {
@@ -129,6 +141,10 @@ impl TextDrawer {
     pub fn get_cloned_component(&self) -> super::Component {
         super::Component::Text(self.component.clone())
     }
+
+    pub fn is_static(&self) -> bool {
+        true // Once we support animated components, this will change
+    }
 }
 
 impl From<super::Text> for TextDrawer {
@@ -140,6 +156,7 @@ impl From<super::Text> for TextDrawer {
 pub struct ImageDrawer {
     component: super::Image,
     image_data: Arc<upload::UploadedAsset>,
+    frame_num: usize, // Only used for animated image. Counts LED frames, not GIF frames
 }
 
 impl ImageDrawer {
@@ -156,7 +173,20 @@ impl ImageDrawer {
             upload::UploadedAsset::Image(image_buf) => {
                 eg_image::ImageRaw::<Rgb888>::new(image_buf.get_rgb_raw(), image_buf.get_width())
             }
-            upload::UploadedAsset::AnimatedImage(_animated_image_buf) => todo!(),
+            upload::UploadedAsset::AnimatedImage(animated_image_buf) => {
+                let frames = animated_image_buf.get_frames();
+
+                let slowdown = match self.component.frame_slowdown {
+                    Some(0) | None => 5, // a reasonable default
+                    Some(x) => x,
+                };
+                let led_frame_modulus = frames.len().saturating_mul(slowdown);
+
+                let next = &frames[self.frame_num / slowdown];
+                self.frame_num = (self.frame_num + 1) % led_frame_modulus;
+
+                eg_image::ImageRaw::<Rgb888>::new(next.get_rgb_raw(), animated_image_buf.get_width())
+            }
         };
 
         let image = eg_image::Image::new(&raw_image, pos);
@@ -166,6 +196,13 @@ impl ImageDrawer {
 
     pub fn get_cloned_component(&self) -> super::Component {
         super::Component::Image(self.component.clone())
+    }
+
+    pub fn is_static(&self) -> bool {
+        if let upload::UploadedAsset::AnimatedImage(_) = *self.image_data {
+            return false;
+        }
+        true
     }
 }
 
@@ -179,6 +216,7 @@ impl ImageDrawer {
             Ok(Self {
                 component,
                 image_data,
+                frame_num: 0,
             })
         } else {
             Err(DrawerCreationError::BadComponentSpec(

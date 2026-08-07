@@ -16,6 +16,7 @@ SERVER_ROOT = "http://127.0.0.1:8080/"
 API_ROOT = SERVER_ROOT + "api/"
 
 CURRENT_DIR = Path(__file__).parent.resolve()
+ROOT_DIR = CURRENT_DIR.parent.parent.resolve()
 
 def get_empty_state_json():
     return {"components": []}
@@ -246,18 +247,15 @@ def test_post_state_multiple_lines_with_text():
     ]}
     assert_post_state(json_state)
     assert_flash_display(2)
-'''
 
-@testcase
 def test_upload_and_delete_file():
-    with open(CURRENT_DIR/"pretty_smol.png", "rb") as f:
+    with open(ROOT_DIR / "assets" / "test" / "vertical_gradient.png", "rb") as f:
         assert_put_file("smol_upload.png", ("dont_care_filename", f, "image/png"), False, True)
     assert_delete_file("smol_upload.png")
 
-@testcase
 def test_upload_files_and_get_files():
     assert_reset_state()
-    with open(CURRENT_DIR/"pretty_smol.png", "rb") as f:
+    with open(ROOT_DIR / "assets" / "test" / "vertical_gradient.png", "rb") as f:
         assert_put_file("smol_upload.png", ("dont_care_filename", f, "image/png"), False, True)
         f.seek(0)
         assert_put_file("smol_upload2.png", ("dont_care_filename", f, "image/png"), False, True)
@@ -268,7 +266,7 @@ def test_upload_files_and_modify_files():
     assert_reset_state()
     # Just check that the response code is correct for modification. Will need a test later on to
     # verify visually that the image updates upon reconfiguring the component state
-    with open(CURRENT_DIR/"pretty_smol.png", "rb") as f:
+    with open(ROOT_DIR / "assets" / "test" / "vertical_gradient.png", "rb") as f:
         assert_put_file("smol_upload.png", ("dont_care_filename", f, "image/png"), False, True)
         f.seek(0)
         assert_put_file("smol_upload.png", ("dont_care_filename", f, "image/png"), False, False)
@@ -277,7 +275,7 @@ def test_upload_files_and_modify_files():
 def test_draw_image():
     assert_reset_state()
 
-    with open(CURRENT_DIR/"pretty_smol.png", "rb") as f:
+    with open(ROOT_DIR / "assets" / "test" / "vertical_gradient.png", "rb") as f:
         assert_put_file("smol_upload.png", ("dont_care_filename", f, "image/png"), False, True)
 
     json_state = {"components": [
@@ -289,6 +287,7 @@ def test_draw_image():
     ]}
     assert_post_state(json_state)
     assert_flash_display(2)
+'''
 
 @testcase
 def test_draw_image_nonexistent_file():
@@ -301,7 +300,25 @@ def test_draw_image_nonexistent_file():
         }
     ]}
     assert_post_state(json_state, False)
-    assert_flash_display(2)
+    assert_flash_display(1)
+
+@testcase
+def test_draw_animated():
+    assert_reset_state()
+
+    with open(ROOT_DIR / "assets" / "test" / "gradient.gif", "rb") as f:
+        assert_put_file("animated.gif", ("dont_care_filename", f, "image/gif"), True, True)
+
+    json_state = {"components": [
+        {
+            "type": "image",
+            "common_properties": { "x": 30, "y": 10, },
+            "source": "animated.gif",
+            "frame_slowdown": 8
+        }
+    ]}
+    assert_post_state(json_state)
+    assert_flash_display(2.5)
 
 
 

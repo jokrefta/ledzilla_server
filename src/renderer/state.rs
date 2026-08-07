@@ -8,7 +8,7 @@ where
 {
     Stopped,
     RenderingStatic { display: Disp },
-    _RenderingDynamic { display: Disp },
+    RenderingDynamic { display: Disp },
 }
 
 #[derive(Debug)]
@@ -42,7 +42,7 @@ impl<Disp: GraphicsDisplay + Debug> StateWrapper<Disp> {
                 state
             }
             State::RenderingStatic { display } => State::RenderingStatic { display: f(display) },
-            State::_RenderingDynamic { display } => State::_RenderingDynamic { display: f(display) },
+            State::RenderingDynamic { display } => State::RenderingDynamic { display: f(display) },
         });
     }
 

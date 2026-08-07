@@ -34,6 +34,7 @@ pub struct Text {
 pub struct Image {
     pub common_properties: CommonProperties,
     pub source: String,
+    pub frame_slowdown: Option<usize>,
 }
 
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
@@ -52,10 +53,6 @@ pub enum Component {
     Image(Image),
     Text(Text),
     Line(Line),
-}
-
-pub fn is_static(_c: Component) -> bool {
-    true // Once we support animated components, this will change
 }
 
 #[cfg(test)]
@@ -133,6 +130,7 @@ mod tests {
                 scroll: None,
             },
             source: String::from("logo.png"),
+            frame_slowdown: None,
         });
 
         test_deserialization(as_json, &as_rust);

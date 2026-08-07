@@ -1,5 +1,5 @@
-API version: 0.3.0
-date: 2026-08-04
+API version: 0.4.0
+date: 2026-08-06
 
 # LEDzilla API
 
@@ -141,25 +141,23 @@ A list of valid fonts may be retrieved from the INFO endpoint.
 
 ---
 
-### Image
+### Image / GIF
 ```json
 {
   "type": "image",
   "common_properties": {...},
-  "source": "logo.png"
+  "source": "logo.png",
+
+  "frame_slowdown": 5
 }
 ```
 
----
+`frame_slowdown` is optional. It only applies for animated images and is ignored otherwise. If omitted, it defaults to a reasonable value.
 
-### Video / GIF
-```json
-{
-  "type": "video",
-  "common_properties": {...},
-  "source": "rickastley.gif"
-}
-```
+A value of 5 means that each GIF frame will last 5 LED refresh frames.
+Assumes the GIF has a constant frame delay for all its frames. 
+The resulting animation speed will of course depend on the refresh 
+rate of the LED display, so the `frame_slowdown` values may need to be determined experimentally. A starting value in the range of 4-10 is suggested.
 
 ---
 

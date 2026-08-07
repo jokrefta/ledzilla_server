@@ -18,7 +18,7 @@ use crate::{
     upload::{AnimatedImageBuf, ImageBuf, UploadManager, UploadedAsset},
 };
 
-const API_VERSION: &str = "0.3.0";
+const API_VERSION: &str = "0.4.0";
 
 #[derive(serde::Serialize)]
 struct DisplayInfo {
@@ -158,6 +158,9 @@ pub fn handle_upload(req: &Request, filename: String, upload_manager: &Mutex<Upl
         "File upload request, width={:?} height={:?} animated='{}' ({})",
         input.width, input.height, input.animated, is_animated
     );
+    if input.width.is_some() || input.height.is_some() {
+        todo!("Implement image resizing (and test if it works for GIFS!)");
+    }
 
     let asset = if is_animated {
         UploadedAsset::AnimatedImage(AnimatedImageBuf::from_encoded_buffer(input.file.data))

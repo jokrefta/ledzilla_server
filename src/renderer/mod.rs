@@ -90,17 +90,20 @@ where
         // do a non-blocking check each iteration to see if a command has come in.
         // Otherwise, we want to block until a command has come in.
 
+        // Note the use of update_display allows us to render without having ownership of the display.
+
         match self.state.get_ref() {
             State::Stopped => command_receiver.recv().unwrap(),
-            // Rendering requires ownership of display, so we must use update_display here as opposed to
-            // matching display by reference in the pattern.
             State::RenderingStatic { .. } => {
                 self.state
                     .update_display(|display| Self::render(&mut self.components, display));
                 command_receiver.recv().unwrap()
             }
-            State::_RenderingDynamic { .. } => {
+            State::RenderingDynamic { .. } => {
                 loop {
+                    self.state
+                        .update_display(|display| Self::render(&mut self.components, display));
+
                     // Early return if command found
                     match command_receiver.try_recv() {
                         Ok(c) => {
@@ -109,8 +112,6 @@ where
                         Err(std::sync::mpsc::TryRecvError::Empty) => (),
                         Err(_) => panic!(),
                     }
-
-                    todo!("need to tick dynamic state and re-render");
                 }
             }
         }
@@ -123,7 +124,7 @@ where
             match (curstate, command) {
                 //__________________________________________________
                 (State::Stopped, Command::Start {response_sender}) => {
-                    Self::start_up(&mut self.display_provider, response_sender)
+                    Self::start_up(&mut self.display_provider, &self.components, response_sender)
                 }
                 //__________________________________________________
                 (State::Stopped, Command::Stop {response_sender}) => {
@@ -132,11 +133,11 @@ where
                     State::Stopped
                 }
                 //__________________________________________________
-                (State::RenderingStatic {..} | State::_RenderingDynamic {..}, Command::Stop {response_sender}) => {
+                (State::RenderingStatic {..} | State::RenderingDynamic {..}, Command::Stop {response_sender}) => {
                     Self::shut_down(response_sender)
                 }
                 //__________________________________________________
-                (state @ (State::RenderingStatic {..} | State::_RenderingDynamic {..}), Command::Start {response_sender}) => {
+                (state @ (State::RenderingStatic {..} | State::RenderingDynamic {..}), Command::Start {response_sender}) => {
                     response_sender.send(true).unwrap();
                     state
                 }
@@ -147,8 +148,13 @@ where
                 }
                 //__________________________________________________
                 (state, Command::SetComponents {response_sender, components}) => {
-                    Self::set_components(&mut self.components, components, response_sender, &*self.upload_manager);
-                    state
+                    Self::set_components(
+                        &mut self.components,
+                        components,
+                        response_sender,
+                        &*self.upload_manager,
+                        state
+                    )
                 }
                 // No default case - we want every command to be responded to.
             }
@@ -160,11 +166,19 @@ where
     // so we cannot borrow self.
 
     /// Create display and return next state. Send a true response on the channel.
-    fn start_up(display_provider: &mut F, success_sender: Sender<bool>) -> State<Disp> {
-        // TODO handle transitioning into dynamic
+    fn start_up(
+        display_provider: &mut F,
+        components: &[ComponentDrawer],
+        success_sender: Sender<bool>,
+    ) -> State<Disp> {
         let display = (display_provider)();
         success_sender.send(true).unwrap();
-        State::RenderingStatic { display }
+
+        if components.iter().all(|c| c.is_static()) {
+            State::RenderingStatic { display }
+        } else {
+            State::RenderingDynamic { display }
+        }
     }
 
     /// Shut down display and return next state. Send a true response on the channel.
@@ -184,34 +198,42 @@ where
         display.update_display()
     }
 
-    /// Update the given components and send a true response on the channel.
+    /// Update the given components and send a success response on the channel.
     fn set_components(
         to_update: &mut Vec<ComponentDrawer>,
         new_components: ComponentList,
         success_sender: Sender<Result<(), CommandError>>,
         upload_manager: &Mutex<upload::UploadManager>,
-    ) {
+        curstate: State<Disp>,
+    ) -> State<Disp> {
         debug!("Changing components. New size: {}", new_components.len());
 
-        // Transform the list of component descriptions into a list of component drawers. These drawers hold
-        // all the info from the original component description, but also hold state needed for rendering
-        let new_drawers: Result<Vec<ComponentDrawer>, draw::DrawerCreationError> = new_components
-            .into_iter()
-            .map(|a| draw::into_drawer(a, upload_manager))
-            .collect();
-
-        match new_drawers {
+        match Self::make_component_drawers(new_components, upload_manager) {
             Ok(drawers) => {
                 *to_update = drawers;
-                success_sender.send(Ok(())).unwrap()
+                success_sender.send(Ok(())).unwrap();
+
+                match curstate {
+                    State::Stopped => curstate,
+                    State::RenderingStatic { display } | State::RenderingDynamic { display } => {
+                        if to_update.iter().all(|c| c.is_static()) {
+                            State::RenderingStatic { display }
+                        } else {
+                            State::RenderingDynamic { display }
+                        }
+                    }
+                }
             }
-            Err(e) => success_sender.send(Err(e.into())).unwrap(),
-        };
+            Err(e) => {
+                success_sender.send(Err(e.into())).unwrap();
+                curstate
+            }
+        }
     }
 
     /// Extract copies of the graphics components into a ComponentList and send it
     /// on the channel
-    fn get_components(component_drawers: &Vec<ComponentDrawer>, response_sender: Sender<ComponentList>) {
+    fn get_components(component_drawers: &[ComponentDrawer], response_sender: Sender<ComponentList>) {
         response_sender
             .send(
                 component_drawers
@@ -220,5 +242,17 @@ where
                     .collect(),
             )
             .unwrap();
+    }
+
+    /// Transform the list of component descriptions into a list of component drawers. These drawers hold
+    /// all the info from the original component description, but also hold state needed for rendering
+    fn make_component_drawers(
+        from_components: ComponentList,
+        upload_manager: &Mutex<upload::UploadManager>,
+    ) -> Result<Vec<ComponentDrawer>, draw::DrawerCreationError> {
+        from_components
+            .into_iter()
+            .map(|a| draw::into_drawer(a, upload_manager))
+            .collect()
     }
 }
