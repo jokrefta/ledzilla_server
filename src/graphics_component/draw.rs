@@ -10,7 +10,32 @@ use thiserror::Error;
 use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
+use crate::graphics_component::ColorSpec;
 use crate::upload;
+
+#[derive(Debug)]
+struct ColorDrawState {
+    colorspec: ColorSpec,
+    /// Subject to change. Used only for animated colors.
+    _animation_frame: u32,
+}
+
+impl From<ColorSpec> for ColorDrawState {
+    fn from(colorspec: ColorSpec) -> Self {
+        Self {
+            colorspec,
+            _animation_frame: 0,
+        }
+    }
+}
+
+impl ColorDrawState {
+    fn get_next(&mut self) -> Rgb888 {
+        match self.colorspec {
+            ColorSpec::Hex(hex_color_spec) => hex_color_spec.into(),
+        }
+    }
+}
 
 #[derive(Debug, Error)]
 pub enum DrawerCreationError {
@@ -73,6 +98,7 @@ pub fn into_drawer(
 
 pub struct LineDrawer {
     component: super::Line,
+    color: ColorDrawState,
 }
 
 impl LineDrawer {
@@ -80,15 +106,12 @@ impl LineDrawer {
     where
         T: embedded_graphics::draw_target::DrawTarget<Color = Rgb888, Error: Debug>,
     {
-        let start = eg_geo::Point::new(
-            self.component.common_properties.x,
-            self.component.common_properties.y,
-        );
-        let delta = eg_geo::Point::new(self.component.delta_x, self.component.delta_y);
-        trace!("Drawing Line({}, {})", start, delta);
-        eg_prim::Line::with_delta(start, delta)
+        let start = eg_geo::Point::new(self.component.x1, self.component.y1);
+        let end = eg_geo::Point::new(self.component.x2, self.component.y2);
+        trace!("Drawing Line({}--{})", start, end);
+        eg_prim::Line::new(start, end)
             .into_styled(eg_prim::PrimitiveStyle::with_stroke(
-                Rgb888::from(self.component.color),
+                self.color.get_next(),
                 self.component.stroke_width,
             ))
             .draw(target)
@@ -106,12 +129,14 @@ impl LineDrawer {
 
 impl From<super::Line> for LineDrawer {
     fn from(component: super::Line) -> Self {
-        Self { component }
+        let color: ColorDrawState = component.color.clone().into();
+        Self { component, color }
     }
 }
 
 pub struct TextDrawer {
     component: super::Text,
+    color: ColorDrawState,
 }
 
 impl TextDrawer {
@@ -119,15 +144,9 @@ impl TextDrawer {
     where
         T: embedded_graphics::draw_target::DrawTarget<Color = Rgb888, Error: Debug>,
     {
-        let pos = eg_geo::Point::new(
-            self.component.common_properties.x,
-            self.component.common_properties.y,
-        );
+        let pos = eg_geo::Point::new(self.component.x, self.component.y);
         trace!("Drawing Text(pos {})", pos);
-        let style = eg_mono::MonoTextStyle::new(
-            self.component.font.get_eg_font(),
-            Rgb888::from(self.component.color),
-        );
+        let style = eg_mono::MonoTextStyle::new(self.component.font.get_eg_font(), self.color.get_next());
         eg_text::Text::with_alignment(
             &self.component.content,
             pos,
@@ -149,7 +168,8 @@ impl TextDrawer {
 
 impl From<super::Text> for TextDrawer {
     fn from(component: super::Text) -> Self {
-        Self { component }
+        let color: ColorDrawState = component.color.clone().into();
+        Self { component, color }
     }
 }
 
@@ -164,10 +184,7 @@ impl ImageDrawer {
     where
         T: embedded_graphics::draw_target::DrawTarget<Color = Rgb888, Error: Debug>,
     {
-        let pos = eg_geo::Point::new(
-            self.component.common_properties.x,
-            self.component.common_properties.y,
-        );
+        let pos = eg_geo::Point::new(self.component.x, self.component.y);
 
         let raw_image = match &*self.image_data {
             upload::UploadedAsset::Image(image_buf) => {

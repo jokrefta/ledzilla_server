@@ -108,7 +108,6 @@ def testcase(func):
     test_cases.append(func)
     return func
 
-'''
 @testcase
 def test_get_info():
     assert_get_info()
@@ -133,11 +132,12 @@ def test_post_state_line_and_clear_state_and_get_state():
     json_state = {"components": [
         {
             "type": "line",
-            "common_properties": { "x": 10, "y": 10, },
-            "delta_x": 1,
-            "delta_y": -5,
+            "x1":  10,
+            "y1": 10,
+            "x2": 11,
+            "y2": 5,
             "stroke_width": 1,
-            "color": "#0022FF"
+            "color": {"type": "hex", "hex_code": "#0022FF"}
         }
     ]}
     assert_post_state(json_state)
@@ -150,11 +150,12 @@ def test_post_state_line_and_render():
     json_state = {"components": [
         {
             "type": "line",
-            "common_properties": { "x": 10, "y": 10, },
-            "delta_x": 1,
-            "delta_y": -5,
+            "x1":  10,
+            "y1": 10,
+            "x2": 11,
+            "y2": 5,
             "stroke_width": 1,
-            "color": "#0022FF"
+            "color": {"type": "hex", "hex_code": "#0022FF"}
         }
     ]}
     assert_post_state(json_state)
@@ -166,11 +167,12 @@ def test_post_state_line_and_get_state():
     json_state = {"components": [
         {
             "type": "line",
-            "common_properties": { "x": 10, "y": 10, },
-            "delta_x": 1,
-            "delta_y": -5,
+            "x1":  10,
+            "y1": 10,
+            "x2": 11,
+            "y2": 5,
             "stroke_width": 1,
-            "color": "#0022FF"
+            "color": {"type": "hex", "hex_code": "#0022FF"}
         }
     ]}
     assert_post_state(json_state)
@@ -182,27 +184,30 @@ def test_post_state_multiple_lines():
     json_state = {"components": [
         {
             "type": "line",
-            "common_properties": { "x": 30, "y": 10, },
-            "delta_x": 80,
-            "delta_y": 0,
+            "x1":  30,
+            "y1": 10,
+            "x2": 110,
+            "y2": 10,
             "stroke_width": 5,
-            "color": "#0022FF"
+            "color": {"type": "hex", "hex_code": "#0022FF"}
         },
         {
             "type": "line",
-            "common_properties": { "x": 20, "y": 15, },
-            "delta_x": 80,
-            "delta_y": 0,
+            "x1":  20,
+            "y1": 15,
+            "x2": 100,
+            "y2": 15,
             "stroke_width": 5,
-            "color": "#FF0022"
+            "color": {"type": "hex", "hex_code": "#FF0022"}
         },
         {
             "type": "line",
-            "common_properties": { "x": 10, "y": 20, },
-            "delta_x": 80,
-            "delta_y": 0,
+            "x1":  10,
+            "y1": 20,
+            "x2": 90,
+            "y2": 20,
             "stroke_width": 5,
-            "color": "#22FF00"
+            "color": {"type": "hex", "hex_code": "#22FF00"}
         }
     ]}
     assert_post_state(json_state)
@@ -214,34 +219,38 @@ def test_post_state_multiple_lines_with_text():
     json_state = {"components": [
         {
             "type": "line",
-            "common_properties": { "x": 30, "y": 10, },
-            "delta_x": 80,
-            "delta_y": 0,
+            "x1":  30,
+            "y1": 10,
+            "x2": 110,
+            "y2": 10,
             "stroke_width": 5,
-            "color": "#0022FF"
+            "color": {"type": "hex", "hex_code": "#0022FF"}
         },
         {
             "type": "line",
-            "common_properties": { "x": 20, "y": 15, },
-            "delta_x": 80,
-            "delta_y": 0,
+            "x1":  20,
+            "y1": 15,
+            "x2": 100,
+            "y2": 15,
             "stroke_width": 5,
-            "color": "#FF0022"
+            "color": {"type": "hex", "hex_code": "#FF0022"}
         },
         {
             "type": "line",
-            "common_properties": { "x": 10, "y": 20, },
-            "delta_x": 80,
-            "delta_y": 0,
+            "x1":  10,
+            "y1": 20,
+            "x2": 90,
+            "y2": 20,
             "stroke_width": 5,
-            "color": "#22FF00"
+            "color": {"type": "hex", "hex_code": "#22FF00"}
         },
         {
             "type": "text",
-            "common_properties": { "x": 100, "y": 40, },
+            "x":  100,
+            "y": 40,
             "content": "Hello world",
             "font": "mono_default_7x13_italic",
-            "color": "#44AA44",
+            "color": {"type": "hex", "hex_code": "#44AA44"},
             "alignment": "Center"
         }
     ]}
@@ -281,13 +290,13 @@ def test_draw_image():
     json_state = {"components": [
         {
             "type": "image",
-            "common_properties": { "x": 30, "y": 10, },
+            "x":  30,
+            "y": 10,
             "source": "smol_upload.png"
         }
     ]}
     assert_post_state(json_state)
     assert_flash_display(2)
-'''
 
 @testcase
 def test_draw_image_nonexistent_file():
@@ -295,7 +304,8 @@ def test_draw_image_nonexistent_file():
     json_state = {"components": [
         {
             "type": "image",
-            "common_properties": { "x": 30, "y": 10, },
+            "x":  30,
+            "y": 10,
             "source": "nonexistent.png"
         }
     ]}
@@ -312,7 +322,8 @@ def test_draw_animated():
     json_state = {"components": [
         {
             "type": "image",
-            "common_properties": { "x": 30, "y": 10, },
+            "x":  30,
+            "y": 10,
             "source": "animated.gif",
             "frame_slowdown": 8
         }
@@ -323,6 +334,7 @@ def test_draw_animated():
 
 
 print("Starting...")
+failures = 0
 for test in test_cases:
     try:
         print("")
@@ -335,3 +347,6 @@ for test in test_cases:
     except AssertionError as e:
         traceback.print_exception(e)
         termcolor.cprint("Failed assertion. Continuing...", "red")
+        failures += 1
+
+print("Total failures", failures)

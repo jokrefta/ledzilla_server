@@ -1,5 +1,5 @@
-API version: 0.4.0
-date: 2026-08-06
+API version: 0.5.0
+date: 2026-08-08
 
 # LEDzilla API
 
@@ -104,20 +104,30 @@ Delete an uploaded file.
 
 All components have a `"type"` field declaring the component type.
 
-### Common properties
-All components share a `"common_properties"` object with these fields:
+Any coordinates are relative to top-left of display. (They are allowed to be outside the range of the display, e.g. if you want part of a shape to be offscreen.)
+
+### Common structures
+There are some structures that used in multiple component definitions. These are defined here to avoid
+repeating them for each component type.
+
+#### Motion config
 
 ```json
-"common_properties": {
-  "x": 0,
-  "y": 0,
-  "scroll": { ... },
+"motion_config" : {
+  // TBD
 }
 ```
 
-"scroll" is optional and currently not supported.
+#### Color types
 
-For most component types, the "x" and "y" values represent the position of the top-left corner of the component.
+```json
+"color" : {
+  "type": "hex",
+  "hex_code": "#ABC9EA"
+}
+```
+
+Future addition: animated color type
 
 ---
 
@@ -125,11 +135,13 @@ For most component types, the "x" and "y" values represent the position of the t
 ```json
 {
   "type": "text",
-  "common_properties": {...},
+  "x": 1,
+  "y": 2,
   "content": "Hello World",
   "font": "mono_default_7x13",
   "color": ...,
   "alignment": "Left",
+  "motion_config": { ... }
 }
 ```
 
@@ -139,16 +151,21 @@ Alignments may be "Left", "Center", "Right".
 
 A list of valid fonts may be retrieved from the INFO endpoint.
 
+`motion_config` is optional.
+
 ---
 
 ### Image / GIF
 ```json
 {
   "type": "image",
-  "common_properties": {...},
+  "x": 1,
+  "y": 2,
   "source": "logo.png",
 
-  "frame_slowdown": 5
+  "frame_slowdown": 5,
+  "motion_config": { ... }
+
 }
 ```
 
@@ -159,20 +176,32 @@ Assumes the GIF has a constant frame delay for all its frames.
 The resulting animation speed will of course depend on the refresh 
 rate of the LED display, so the `frame_slowdown` values may need to be determined experimentally. A starting value in the range of 4-10 is suggested.
 
+`motion_config` is optional.
+
 ---
 
 ### Rectangle
 ```json
 {
   "type": "rect",
-  "common_properties": {...},
+  "x": 1,
+  "y": 2,
   "width": 10,
   "height": 10,
-  "border_color": ...,
+  "border_color": { ... },
   "border_width": 1,
-  "fill_color": ...
+
+  "fill_color": { ... } ,
+  "motion_config": { ... }
 }
 ```
+
+`fill_color` and `border_color` are color specifications as defined in the  **Common structures** section above.
+
+`x` and `y` are the top-left corner of the rectangle.
+
+`fill_color` and `motion_config` are optional. If no fill color is given, the interior will be transparent (only the border will be drawn).
+
 
 ---
 
@@ -180,17 +209,18 @@ rate of the LED display, so the `frame_slowdown` values may need to be determine
 ```json
 {
   "type": "line",
-  "common_properties": {...},
-  "delta_x": 1,
-  "delta_y": -5,
+  "x1":2,
+  "y1": 9,
+  "x2": 3,
+  "y2": 4,
   "stroke_width": 1,
-  "color": ...
+  "color": { ... },
+  "motion_config": { ... }
 }
 ```
 
-For a line, the "common_properties" x and y values define one endpoint, and the "delta_x"/"delta_y" values define the 
-offset of the other endpoint relative to the first.
+`motion_config` is optional.
+
+
 
 ---
-
-*Fields marked `...` are TBD: color and scroll are not yet fully specified.*

@@ -1,16 +1,35 @@
 use std::{fmt::Display, str::FromStr};
 
 use embedded_graphics::pixelcolor::Rgb888;
+use serde::{Deserialize, Serialize};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 
+#[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
+#[serde(tag = "type")]
+#[serde(rename_all = "lowercase")]
+pub enum ColorSpec {
+    Hex(HexColorSpec),
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
+pub struct HexColorSpec {
+    pub hex_code: HexColorString,
+}
+
+impl From<HexColorSpec> for Rgb888 {
+    fn from(c: HexColorSpec) -> Self {
+        c.hex_code.into()
+    }
+}
+
 #[derive(SerializeDisplay, DeserializeFromStr, Debug, PartialEq, Clone, Copy)]
-pub struct ColorSpec {
+pub struct HexColorString {
     r: u8,
     g: u8,
     b: u8,
 }
 
-impl ColorSpec {
+impl HexColorString {
     pub fn try_from_rgb<T: TryInto<u8>>(r: T, g: T, b: T) -> Result<Self, T::Error> {
         Ok(Self::from_rgb(r.try_into()?, g.try_into()?, b.try_into()?))
     }
@@ -24,13 +43,13 @@ impl ColorSpec {
     }
 }
 
-impl Display for ColorSpec {
+impl Display for HexColorString {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "#{:02X}{:02X}{:02X}", self.r, self.g, self.b)
     }
 }
 
-impl FromStr for ColorSpec {
+impl FromStr for HexColorString {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -53,8 +72,8 @@ impl FromStr for ColorSpec {
     }
 }
 
-impl From<ColorSpec> for Rgb888 {
-    fn from(c: ColorSpec) -> Self {
+impl From<HexColorString> for Rgb888 {
+    fn from(c: HexColorString) -> Self {
         Rgb888::new(c.r, c.g, c.b)
     }
 }

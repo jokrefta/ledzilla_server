@@ -189,7 +189,7 @@ where
 
     /// Take the display, draw onto it, update it, and return it back.
     fn render(components: &mut Vec<ComponentDrawer>, mut display: Disp) -> Disp {
-        debug!("rendering");
+        // debug!("rendering");
         let canvas = display.get_draw_target();
         for drawer in components {
             drawer.draw_next_frame(canvas);
