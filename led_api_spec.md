@@ -1,4 +1,4 @@
-API version: 0.5.0
+API version: 0.6.0
 date: 2026-08-08
 
 # LEDzilla API
@@ -122,10 +122,12 @@ repeating them for each component type.
 
 ```json
 "color" : {
-  "type": "hex",
-  "hex_code": "#ABC9EA"
+  "type": "static",
+  "color": "#ABC9EA"
 }
 ```
+
+`color` is a string in CSS color format.
 
 Future addition: animated color type
 

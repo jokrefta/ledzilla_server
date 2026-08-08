@@ -137,7 +137,7 @@ def test_post_state_line_and_clear_state_and_get_state():
             "x2": 11,
             "y2": 5,
             "stroke_width": 1,
-            "color": {"type": "hex", "hex_code": "#0022FF"}
+            "color": {"type": "static", "color": "#0022FF"}
         }
     ]}
     assert_post_state(json_state)
@@ -155,7 +155,7 @@ def test_post_state_line_and_render():
             "x2": 11,
             "y2": 5,
             "stroke_width": 1,
-            "color": {"type": "hex", "hex_code": "#0022FF"}
+            "color": {"type": "static", "color": "#0022FF"}
         }
     ]}
     assert_post_state(json_state)
@@ -172,7 +172,7 @@ def test_post_state_line_and_get_state():
             "x2": 11,
             "y2": 5,
             "stroke_width": 1,
-            "color": {"type": "hex", "hex_code": "#0022FF"}
+            "color": {"type": "static", "color": "#0022FF"}
         }
     ]}
     assert_post_state(json_state)
@@ -189,7 +189,7 @@ def test_post_state_multiple_lines():
             "x2": 110,
             "y2": 10,
             "stroke_width": 5,
-            "color": {"type": "hex", "hex_code": "#0022FF"}
+            "color": {"type": "static", "color": "#0022FF"}
         },
         {
             "type": "line",
@@ -198,7 +198,7 @@ def test_post_state_multiple_lines():
             "x2": 100,
             "y2": 15,
             "stroke_width": 5,
-            "color": {"type": "hex", "hex_code": "#FF0022"}
+            "color": {"type": "static", "color": "#FF0022"}
         },
         {
             "type": "line",
@@ -207,7 +207,7 @@ def test_post_state_multiple_lines():
             "x2": 90,
             "y2": 20,
             "stroke_width": 5,
-            "color": {"type": "hex", "hex_code": "#22FF00"}
+            "color": {"type": "static", "color": "#22FF00"}
         }
     ]}
     assert_post_state(json_state)
@@ -224,7 +224,7 @@ def test_post_state_multiple_lines_with_text():
             "x2": 110,
             "y2": 10,
             "stroke_width": 5,
-            "color": {"type": "hex", "hex_code": "#0022FF"}
+            "color": {"type": "static", "color": "#0022FF"}
         },
         {
             "type": "line",
@@ -233,7 +233,7 @@ def test_post_state_multiple_lines_with_text():
             "x2": 100,
             "y2": 15,
             "stroke_width": 5,
-            "color": {"type": "hex", "hex_code": "#FF0022"}
+            "color": {"type": "static", "color": "#FF0022"}
         },
         {
             "type": "line",
@@ -242,7 +242,7 @@ def test_post_state_multiple_lines_with_text():
             "x2": 90,
             "y2": 20,
             "stroke_width": 5,
-            "color": {"type": "hex", "hex_code": "#22FF00"}
+            "color": {"type": "static", "color": "#22FF00"}
         },
         {
             "type": "text",
@@ -250,7 +250,7 @@ def test_post_state_multiple_lines_with_text():
             "y": 40,
             "content": "Hello world",
             "font": "mono_default_7x13_italic",
-            "color": {"type": "hex", "hex_code": "#44AA44"},
+            "color": {"type": "static", "color": "#44AA44"},
             "alignment": "Center"
         }
     ]}

@@ -32,7 +32,7 @@ impl From<ColorSpec> for ColorDrawState {
 impl ColorDrawState {
     fn get_next(&mut self) -> Rgb888 {
         match self.colorspec {
-            ColorSpec::Hex(hex_color_spec) => hex_color_spec.into(),
+            ColorSpec::Static(static_color_spec) => static_color_spec.color.into(),
         }
     }
 }

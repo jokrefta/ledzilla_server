@@ -63,13 +63,13 @@ pub enum Component {
 
 #[cfg(test)]
 mod tests {
-    use crate::graphics_component::color::HexColorString;
+    use crate::graphics_component::color;
 
     use super::*;
 
-    fn mk_hex_colorspec(r: u8, g: u8, b: u8) -> color::ColorSpec {
-        ColorSpec::Hex(color::HexColorSpec {
-            hex_code: HexColorString::from_rgb(r, g, b),
+    fn mk_static_colorspec(r: u8, g: u8, b: u8) -> color::ColorSpec {
+        ColorSpec::Static(color::StaticColorSpec {
+            color: color::Color::from_rgb(r, g, b),
         })
     }
 
@@ -110,8 +110,8 @@ mod tests {
             "content": "Hello World",
             "font": "mono_default_5x7",
             "color": {
-                "type": "hex",
-                "hex_code": "#FF0001"
+                "type": "static",
+                "color": "#FF0001"
             },
             "alignment": "Left"
         }"##;
@@ -121,7 +121,7 @@ mod tests {
             y: 2,
             content: "Hello World".to_string(),
             font: font::Font::mono_default_5x7,
-            color: mk_hex_colorspec(255, 0, 1),
+            color: mk_static_colorspec(255, 0, 1),
             alignment: Alignment::Left,
             motion_config: None,
         });
@@ -161,8 +161,8 @@ mod tests {
             "y2": 8,
             "stroke_width": 1,
             "color": {
-                "type": "hex",
-                "hex_code": "#FF0001"
+                "type": "static",
+                "color": "#FF0001"
             }
         }"##;
 
@@ -172,7 +172,7 @@ mod tests {
             x2: 5,
             y2: 8,
             stroke_width: 1,
-            color: mk_hex_colorspec(255, 0, 1),
+            color: mk_static_colorspec(255, 0, 1),
             motion_config: None,
         });
 
