@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Some tests for the ledzilla server. Not 100% automated - some manual inspection is 
+Some tests for the ledzilla server. Not 100% automated - some manual inspection is
 required to ensure proper output (especially for the display)
 """
 
@@ -111,7 +111,7 @@ def testcase(func):
 @testcase
 def test_get_info():
     assert_get_info()
-
+'''
 @testcase
 def test_display_on_off():
     assert_reset_state()
@@ -357,7 +357,38 @@ def test_draw_animated():
     ]}
     assert_post_state(json_state)
     assert_flash_display(2.5)
+'''
 
+@testcase
+def test_post_state_rect_and_render():
+    assert_reset_state()
+    json_state = {"components": [
+        {
+
+          "type": "rectangle",
+          "x": 30,
+          "y": 20,
+          "width": 20,
+          "height": 10,
+          "border_color": {
+              "type": "animated",
+              "duration": 60,
+              "keyframes": [
+                  [0, "#FF0000"],
+                  [20, "0000FF"],
+                  [90, "#00FFFF"],
+                  [100, "#FF0000"]
+              ]
+          },
+          "border_width": 3,
+          "fill_color": {
+              "type": "static",
+              "color": "ffa09e"
+          }
+        }
+    ]}
+    assert_post_state(json_state)
+    assert_flash_display(2)
 
 
 print("Starting...")

@@ -1,5 +1,5 @@
-API version: 0.6.1
-date: 2026-08-08
+API version: 0.6.2
+date: 2026-08-09
 
 # LEDzilla API
 
@@ -216,7 +216,7 @@ rate of the LED display, so the `frame_slowdown` values may need to be determine
 ### Rectangle
 ```json
 {
-  "type": "rect",
+  "type": "rectangle",
   "x": 1,
   "y": 2,
   "width": 10,

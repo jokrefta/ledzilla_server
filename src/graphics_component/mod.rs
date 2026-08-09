@@ -52,6 +52,20 @@ pub struct Line {
     pub motion_config: Option<MotionConfig>,
 }
 
+#[skip_serializing_none]
+#[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
+pub struct Rectangle {
+    pub x: i32,
+    pub y: i32,
+    pub width: u32,
+    pub height: u32,
+    pub border_color: ColorSpec,
+    pub border_width: u32,
+
+    pub fill_color: Option<ColorSpec>,
+    pub motion_config: Option<MotionConfig>,
+}
+
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
 #[serde(tag = "type")]
 #[serde(rename_all = "lowercase")]
@@ -59,6 +73,7 @@ pub enum Component {
     Image(Image),
     Text(Text),
     Line(Line),
+    Rectangle(Rectangle),
 }
 
 #[cfg(test)]
@@ -320,5 +335,39 @@ mod tests {
             ]
             }"##,
         );
+    }
+
+    #[test]
+    fn rect() {
+        let as_json = r##"{
+            "type": "rectangle",
+            "x": 10,
+            "y": 2,
+            "width": 50,
+            "height": 9,
+            "border_color": {
+                "type": "static",
+                "color": "#A05500"
+            },
+            "border_width": 3,
+            "fill_color": {
+                "type": "static",
+                "color": "ffa09e"
+            }
+        }"##;
+
+        let as_rust = Component::Rectangle(Rectangle {
+            x: 10,
+            y: 2,
+            width: 50,
+            height: 9,
+            border_width: 3,
+            border_color: mk_static_colorspec(160, 85, 0),
+            fill_color: Some(mk_static_colorspec(255, 160, 158)),
+            motion_config: None,
+        });
+
+        test_deserialization(as_json, &as_rust);
+        test_ser_des(&as_rust);
     }
 }

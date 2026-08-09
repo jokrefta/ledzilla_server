@@ -1,4 +1,5 @@
 use embedded_graphics::pixelcolor::Rgb888;
+use embedded_graphics::primitives::PrimitiveStyleBuilder;
 use embedded_graphics::{
     Drawable, geometry as eg_geo, image as eg_image, mono_font as eg_mono, prelude::Primitive,
     primitives as eg_prim, text as eg_text,
@@ -107,6 +108,7 @@ pub enum ComponentDrawer {
     Image(ImageDrawer),
     Line(LineDrawer),
     Text(TextDrawer),
+    Rect(RectDrawer),
 }
 
 impl ComponentDrawer {
@@ -118,6 +120,7 @@ impl ComponentDrawer {
             Self::Image(drawer) => drawer.draw_next_frame(target),
             Self::Line(drawer) => drawer.draw_next_frame(target),
             Self::Text(drawer) => drawer.draw_next_frame(target),
+            Self::Rect(drawer) => drawer.draw_next_frame(target),
         }
     }
 
@@ -126,6 +129,7 @@ impl ComponentDrawer {
             Self::Image(drawer) => drawer.get_cloned_component(),
             Self::Line(drawer) => drawer.get_cloned_component(),
             Self::Text(drawer) => drawer.get_cloned_component(),
+            Self::Rect(drawer) => drawer.get_cloned_component(),
         }
     }
 
@@ -134,6 +138,7 @@ impl ComponentDrawer {
             Self::Image(drawer) => drawer.is_static(),
             Self::Line(drawer) => drawer.is_static(),
             Self::Text(drawer) => drawer.is_static(),
+            Self::Rect(drawer) => drawer.is_static(),
         }
     }
 }
@@ -149,6 +154,7 @@ pub fn into_drawer(
         )?)),
         super::Component::Text(text) => Ok(ComponentDrawer::Text(TextDrawer::from(text))),
         super::Component::Line(line) => Ok(ComponentDrawer::Line(LineDrawer::from(line))),
+        super::Component::Rectangle(rectangle) => Ok(ComponentDrawer::Rect(RectDrawer::from(rectangle))),
     }
 }
 
@@ -301,6 +307,60 @@ impl ImageDrawer {
             Err(DrawerCreationError::BadComponentSpec(
                 "Could not find filename in database".to_string(),
             ))
+        }
+    }
+}
+
+pub struct RectDrawer {
+    component: super::Rectangle,
+    border_color: ColorDrawState,
+    fill_color: Option<ColorDrawState>,
+}
+
+impl RectDrawer {
+    pub fn draw_next_frame<T>(&mut self, target: &mut T)
+    where
+        T: embedded_graphics::draw_target::DrawTarget<Color = Rgb888, Error: Debug>,
+    {
+        let top_left = eg_geo::Point::new(self.component.x, self.component.y);
+        let extent = eg_geo::Size::new(self.component.width, self.component.height);
+        trace!("Drawing Rect(({}), size ({}))", top_left, extent);
+
+        let mut style_builder = PrimitiveStyleBuilder::new()
+            .stroke_width(self.component.border_width)
+            .stroke_color(self.border_color.get_next());
+        if let Some(ref mut color) = self.fill_color {
+            style_builder = style_builder.fill_color(color.get_next());
+        }
+        eg_prim::Rectangle::new(top_left, extent)
+            .into_styled(style_builder.build())
+            .draw(target)
+            .unwrap();
+    }
+
+    pub fn get_cloned_component(&self) -> super::Component {
+        super::Component::Rectangle(self.component.clone())
+    }
+
+    pub fn is_static(&self) -> bool {
+        if let ColorDrawState::Animated(..) = self.border_color {
+            return false;
+        }
+        if let Some(ColorDrawState::Animated(..)) = self.fill_color {
+            return false;
+        }
+        true
+    }
+}
+
+impl From<super::Rectangle> for RectDrawer {
+    fn from(component: super::Rectangle) -> Self {
+        let fill_color = component.fill_color.clone().map(ColorDrawState::from);
+        let border_color = ColorDrawState::from(component.border_color.clone());
+        Self {
+            component,
+            border_color,
+            fill_color,
         }
     }
 }
