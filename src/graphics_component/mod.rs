@@ -73,6 +73,19 @@ mod tests {
         })
     }
 
+    fn mk_animated_colorspec(duration: usize, keyframes: Vec<(u8, color::Color)>) -> color::ColorSpec {
+        ColorSpec::Animated(color::AnimatedColorSpec { duration, keyframes })
+    }
+
+    fn assert_failed_deserialization<'a, T>(as_json: &'a str)
+    where
+        T: std::fmt::Debug + PartialEq + serde::Deserialize<'a>,
+    {
+        let result: Result<T, serde_json::Error> = serde_json::from_str(as_json);
+        // dbg!(&result);
+        assert!(result.is_err());
+    }
+
     fn test_deserialization<'a, T>(as_json: &'a str, as_rust: &T)
     where
         T: std::fmt::Debug + PartialEq + serde::Deserialize<'a>,
@@ -178,5 +191,134 @@ mod tests {
 
         test_deserialization(as_json, &as_rust);
         test_ser_des(&as_rust);
+    }
+
+    #[test]
+    fn line_rgb_css_spec() {
+        let as_json = r##"{
+            "type": "line",
+            "x1": 10,
+            "y1": 2,
+            "x2": 5,
+            "y2": 8,
+            "stroke_width": 1,
+            "color": {
+                "type": "static",
+                "color": "rgb(255 0 1)"
+            }
+        }"##;
+
+        let as_rust = Component::Line(Line {
+            x1: 10,
+            y1: 2,
+            x2: 5,
+            y2: 8,
+            stroke_width: 1,
+            color: mk_static_colorspec(255, 0, 1),
+            motion_config: None,
+        });
+
+        test_deserialization(as_json, &as_rust);
+        test_ser_des(&as_rust);
+    }
+
+    #[test]
+    fn color_static() {
+        let as_json = r##"{
+                "type": "static",
+                "color": "rgb(255 0 1)"
+            }
+        "##;
+
+        let as_rust = mk_static_colorspec(255, 0, 1);
+
+        test_deserialization(as_json, &as_rust);
+        test_ser_des(&as_rust);
+    }
+
+    #[test]
+    fn color_animated() {
+        let as_json = r##"{
+            "type": "animated",
+            "duration": 30,
+            "keyframes": [
+                [0, "#FF0000"],
+                [20, "rgb(0, 120, 0)"],
+                [90, "#00F"],
+                [100, "#FF0000"]
+            ]
+        }"##;
+
+        let as_rust = mk_animated_colorspec(
+            30,
+            vec![
+                (0, color::Color::from_rgb(255, 0, 0)),
+                (20, color::Color::from_rgb(0, 120, 0)),
+                (90, color::Color::from_rgb(0, 0, 255)),
+                (100, color::Color::from_rgb(255, 0, 0)),
+            ],
+        );
+
+        test_deserialization(as_json, &as_rust);
+        test_ser_des(&as_rust);
+    }
+
+    #[test]
+    fn color_animated_invalid_keyframe_range() {
+        assert_failed_deserialization::<color::ColorSpec>(
+            r##"{
+            "type": "animated",
+            "duration": 30,
+            "keyframes": [
+                [0, "#FF0000"],
+                [20, "rgb(0, 120, 0)"],
+                [90, "#00F"],
+                [100, "#FF0000"],
+                [102, "#FF0000"]
+            ]
+            }"##,
+        );
+    }
+
+    #[test]
+    fn color_animated_invalid_missing_endpoints() {
+        assert_failed_deserialization::<color::ColorSpec>(
+            r##"{
+            "type": "animated",
+            "duration": 30,
+            "keyframes": [
+                [0, "#FF0000"],
+                [20, "rgb(0, 120, 0)"],
+                [90, "#00F"],
+            ]
+            }"##,
+        );
+        assert_failed_deserialization::<color::ColorSpec>(
+            r##"{
+            "type": "animated",
+            "duration": 30,
+            "keyframes": [
+                [20, "rgb(0, 120, 0)"],
+                [90, "#00F"],
+                [100, "#FF0000"],
+            ]
+            }"##,
+        );
+    }
+
+    #[test]
+    fn color_animated_invalid_keyframe_not_increasing() {
+        assert_failed_deserialization::<color::ColorSpec>(
+            r##"{
+            "type": "animated",
+            "duration": 30,
+            "keyframes": [
+                [0, "#FF0000"],
+                [90, "#00F"],
+                [90, "rgb(0, 120, 0)"],
+                [100, "#FF0000"],
+            ]
+            }"##,
+        );
     }
 }

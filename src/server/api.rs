@@ -18,7 +18,7 @@ use crate::{
     upload::{AnimatedImageBuf, ImageBuf, UploadManager, UploadedAsset},
 };
 
-const API_VERSION: &str = "0.6.0";
+const API_VERSION: &str = "0.6.1";
 
 #[derive(serde::Serialize)]
 struct DisplayInfo {

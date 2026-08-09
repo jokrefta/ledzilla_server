@@ -127,6 +127,23 @@ def test_post_state_empty():
     assert_post_state(get_empty_state_json())
 
 @testcase
+def test_post_state_line_and_get_state():
+    assert_reset_state()
+    json_state = {"components": [
+        {
+            "type": "line",
+            "x1":  10,
+            "y1": 10,
+            "x2": 11,
+            "y2": 5,
+            "stroke_width": 1,
+            "color": {"type": "static", "color": "#0022FF"}
+        }
+    ]}
+    assert_post_state(json_state)
+    assert_get_state()
+
+@testcase
 def test_post_state_line_and_clear_state_and_get_state():
     assert_reset_state()
     json_state = {"components": [
@@ -162,21 +179,31 @@ def test_post_state_line_and_render():
     assert_flash_display(2)
 
 @testcase
-def test_post_state_line_and_get_state():
+def test_post_state_line_animated_color_and_render():
     assert_reset_state()
     json_state = {"components": [
         {
             "type": "line",
             "x1":  10,
-            "y1": 10,
-            "x2": 11,
-            "y2": 5,
-            "stroke_width": 1,
-            "color": {"type": "static", "color": "#0022FF"}
+            "y1": 30,
+            "x2": 200,
+            "y2": 35,
+            "stroke_width": 20,
+            "color": {
+                "type": "animated",
+                "duration": 60,
+                "keyframes": [
+                    [0, "#FF0000"],
+                    [20, "rgb(0, 120, 0)"],
+                    [90, "#00F"],
+                    [100, "#FF0000"]
+                ]
+            }
         }
     ]}
     assert_post_state(json_state)
-    assert_get_state()
+    assert_flash_display(4)
+
 
 @testcase
 def test_post_state_multiple_lines():

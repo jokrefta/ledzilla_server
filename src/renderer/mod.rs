@@ -78,8 +78,9 @@ where
     pub fn run(&mut self, command_receiver: Receiver<Command>) {
         loop {
             let command = self.run_until_next_command(&command_receiver);
-            debug!("received {:?} in state {:?}", command, self.state);
+            debug!("received {:?} in state {}", command, self.state.get_ref());
             self.handle_command(command);
+            debug!("Afterwards, state is now {}", self.state.get_ref());
         }
     }
 

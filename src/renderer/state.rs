@@ -1,5 +1,5 @@
 use crate::display::GraphicsDisplay;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 
 #[derive(Debug)]
 pub enum State<Disp>
@@ -9,6 +9,19 @@ where
     Stopped,
     RenderingStatic { display: Disp },
     RenderingDynamic { display: Disp },
+}
+
+impl<Disp> Display for State<Disp>
+where
+    Disp: GraphicsDisplay + Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            State::Stopped => write!(f, "Stopped"),
+            State::RenderingStatic { .. } => write!(f, "RenderingStatic"),
+            State::RenderingDynamic { .. } => write!(f, "RenderingDynamic"),
+        }
+    }
 }
 
 #[derive(Debug)]

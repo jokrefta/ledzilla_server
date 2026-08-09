@@ -1,4 +1,4 @@
-API version: 0.6.0
+API version: 0.6.1
 date: 2026-08-08
 
 # LEDzilla API
@@ -120,6 +120,7 @@ repeating them for each component type.
 
 #### Color types
 
+##### Static
 ```json
 "color" : {
   "type": "static",
@@ -127,9 +128,39 @@ repeating them for each component type.
 }
 ```
 
-`color` is a string in CSS color format.
+`color` is a string in CSS color format. (Named colors are not currently supported).
 
-Future addition: animated color type
+##### Animated
+
+```json
+"color" : {
+    "type": "animated",
+    "duration": 30,
+    "keyframes": [
+        [0, "#FF0000"],
+        [20, "rgb(0, 120, 0)"],
+        [90, "#00F"],
+        [100, "#FF0000"]
+    ]
+}
+```
+
+Color smoothly transitions in a looping animation.
+
+Note the various valid CSS formats that are accepted.
+
+Keyframes are in percent - a value outside [0, 100] will be rejected.
+
+The above example 
+- starts at red but smoothly transitions to dark green
+- Hits dark green when 20% of the way through the animation
+- Reaches blue when 90% of the way through
+- Quickly shifts back to red during the last 10%, so the loop looks clean.
+
+Both 0 and 100 are **required** to be present.
+
+The meaning of `duration` is TBD, but probably will be number of total frames for the animation loop. Note that all steps in
+the gradient will be computed and stored in memory, so don't set this to some insane value in the millions.
 
 ---
 

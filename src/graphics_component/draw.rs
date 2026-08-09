@@ -1,4 +1,3 @@
-use anyhow::Result;
 use embedded_graphics::pixelcolor::Rgb888;
 use embedded_graphics::{
     Drawable, geometry as eg_geo, image as eg_image, mono_font as eg_mono, prelude::Primitive,
@@ -11,28 +10,85 @@ use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
 use crate::graphics_component::ColorSpec;
+use crate::graphics_component::color;
 use crate::upload;
 
 #[derive(Debug)]
-struct ColorDrawState {
-    colorspec: ColorSpec,
-    /// Subject to change. Used only for animated colors.
-    _animation_frame: u32,
+enum ColorDrawState {
+    Static(StaticColorDrawState),
+    Animated(AnimatedColorDrawState),
+}
+
+#[derive(Debug)]
+struct StaticColorDrawState {
+    color: color::Color,
+}
+
+impl From<color::StaticColorSpec> for StaticColorDrawState {
+    fn from(colorspec: color::StaticColorSpec) -> Self {
+        Self {
+            color: colorspec.color,
+        }
+    }
+}
+
+impl StaticColorDrawState {
+    fn get_next(&mut self) -> Rgb888 {
+        self.color.into()
+    }
+}
+
+/// Holds the state of the color animation.
+/// All steps in the animation sequence are computed at construction, so we can
+/// quickly grab the next one when needed.
+///
+/// Do we need to store a separate color for every single frame? Probably not.
+/// A future optimization might be only updating color, say, every 4 frames.
+/// This would reduce the number of animation points and the user wouldn't be
+/// able to tell the difference
+#[derive(Debug)]
+struct AnimatedColorDrawState {
+    color_steps: Vec<color::Color>,
+    cur_step: usize,
+}
+
+impl TryFrom<color::AnimatedColorSpec> for AnimatedColorDrawState {
+    type Error = color::util::GradientBuilderError;
+
+    fn try_from(colorspec: color::AnimatedColorSpec) -> Result<Self, Self::Error> {
+        let gradient = color::util::mk_gradient(&colorspec.keyframes, colorspec.duration)?;
+        Ok(Self {
+            color_steps: gradient,
+            cur_step: 0,
+        })
+    }
+}
+
+impl AnimatedColorDrawState {
+    fn get_next(&mut self) -> Rgb888 {
+        let next = self.color_steps[self.cur_step];
+        self.cur_step = (self.cur_step + 1) % self.color_steps.len();
+        next.into()
+    }
 }
 
 impl From<ColorSpec> for ColorDrawState {
     fn from(colorspec: ColorSpec) -> Self {
-        Self {
-            colorspec,
-            _animation_frame: 0,
+        match colorspec {
+            ColorSpec::Static(spec) => Self::Static(spec.into()),
+            // Creation of the animated color state is fallible, but really should never fail.
+            // Validation is done when deserializing the animated color spec which should guarantee a valid
+            // configuration.
+            ColorSpec::Animated(spec) => Self::Animated(spec.try_into().unwrap()),
         }
     }
 }
 
 impl ColorDrawState {
     fn get_next(&mut self) -> Rgb888 {
-        match self.colorspec {
-            ColorSpec::Static(static_color_spec) => static_color_spec.color.into(),
+        match self {
+            ColorDrawState::Static(static_draw_state) => static_draw_state.get_next(),
+            ColorDrawState::Animated(animated_draw_state) => animated_draw_state.get_next(),
         }
     }
 }
@@ -108,7 +164,7 @@ impl LineDrawer {
     {
         let start = eg_geo::Point::new(self.component.x1, self.component.y1);
         let end = eg_geo::Point::new(self.component.x2, self.component.y2);
-        trace!("Drawing Line({}--{})", start, end);
+        trace!("Drawing Line(({})--({}))", start, end);
         eg_prim::Line::new(start, end)
             .into_styled(eg_prim::PrimitiveStyle::with_stroke(
                 self.color.get_next(),
@@ -123,7 +179,10 @@ impl LineDrawer {
     }
 
     pub fn is_static(&self) -> bool {
-        true // Once we support animated components, this will change
+        if let ColorDrawState::Animated(..) = self.color {
+            return false;
+        }
+        true
     }
 }
 
@@ -162,7 +221,10 @@ impl TextDrawer {
     }
 
     pub fn is_static(&self) -> bool {
-        true // Once we support animated components, this will change
+        if let ColorDrawState::Animated(..) = self.color {
+            return false;
+        }
+        true
     }
 }
 
@@ -216,7 +278,7 @@ impl ImageDrawer {
     }
 
     pub fn is_static(&self) -> bool {
-        if let upload::UploadedAsset::AnimatedImage(_) = *self.image_data {
+        if let upload::UploadedAsset::AnimatedImage(..) = *self.image_data {
             return false;
         }
         true
