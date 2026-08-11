@@ -5,10 +5,56 @@
 
 use std::{collections::BTreeMap, sync::Arc};
 
+use thiserror::Error;
+
 #[derive(Debug)]
 pub enum UploadedAsset {
     Image(ImageBuf),
     AnimatedImage(AnimatedImageBuf),
+}
+
+#[derive(Debug, Error)]
+pub enum UploadError {
+    #[error("Image error: {0}")]
+    ImageError(image::ImageError),
+    #[error("I/O error?? {0}")]
+    IoError(std::io::Error),
+    #[error("Detected image format is not a supported type: {0:?}")]
+    UnsupportedImageType(image::ImageFormat),
+}
+
+pub type ResizeFilter = image::imageops::FilterType;
+pub fn resize_filter_from_str(s: &str) -> Option<ResizeFilter> {
+    match s.to_ascii_lowercase().as_str() {
+        "nearest_neighbor" => Some(ResizeFilter::Nearest),
+        "bilinear" => Some(ResizeFilter::Triangle),
+        "bicubic" => Some(ResizeFilter::CatmullRom),
+        _ => None,
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ResizeOptions {
+    pub width: Option<u32>,
+    pub height: Option<u32>,
+    pub filter: ResizeFilter,
+}
+
+fn resize_image(img: image::DynamicImage, opts: &ResizeOptions) -> image::DynamicImage {
+    if let Some(width) = opts.width
+        && let Some(height) = opts.height
+    {
+        // Both dimensions provided - resize exact
+        img.resize_exact(width, height, opts.filter)
+    } else if opts.width.is_some() || opts.height.is_some() {
+        // Single dimension provided - maintain aspect ratio
+        let width = opts.width.unwrap_or_else(|| img.width());
+        let height = opts.height.unwrap_or_else(|| img.height());
+        img.resize(width, height, opts.filter)
+    } else {
+        // No resizing to do
+        img
+    }
 }
 
 /// Holds a non-animated image buffer
@@ -20,12 +66,28 @@ pub struct ImageBuf {
 impl ImageBuf {
     /// Create from a buffer containing an image encoded in a supported filetype (e.g, PNG).
     /// The format will be auto detected.
-    pub fn from_encoded_buffer(buf: Vec<u8>) -> Self {
-        // TODO don't unwrap, check error
+    #[allow(unused)]
+    pub fn from_encoded_buffer(buf: Vec<u8>) -> Result<Self, UploadError> {
+        Self::from_encoded_buffer_resize(buf, &None)
+    }
+
+    /// Create from a buffer containing an image encoded in a supported filetype (e.g, PNG).
+    /// The format will be auto detected.
+    pub fn from_encoded_buffer_resize(
+        buf: Vec<u8>,
+        resize: &Option<ResizeOptions>,
+    ) -> Result<Self, UploadError> {
         let cursor = std::io::Cursor::new(buf);
-        let image_reader = image::ImageReader::new(cursor).with_guessed_format().unwrap();
-        let img: image::RgbImage = image_reader.decode().unwrap().into();
-        Self { image: img }
+        let image_reader = image::ImageReader::new(cursor)
+            .with_guessed_format()
+            .map_err(UploadError::IoError)?;
+
+        let mut d_img: image::DynamicImage = image_reader.decode().map_err(UploadError::ImageError)?;
+
+        if let Some(opts) = resize {
+            d_img = resize_image(d_img, opts);
+        }
+        Ok(Self { image: d_img.into() })
     }
 
     pub fn get_width(&self) -> u32 {
@@ -53,13 +115,16 @@ impl RgbFrame {
     pub fn get_rgb_raw(&self) -> &[u8] {
         &self.img
     }
-}
 
-impl From<image::Frame> for RgbFrame {
-    fn from(f: image::Frame) -> Self {
+    pub fn from_frame(f: image::Frame, resize: &Option<ResizeOptions>) -> Self {
         // They don't have a direct conversion between RgbaImage and RgbImage for some reason, so we have to go to DynamicImage first
-        let img = image::RgbImage::from(image::DynamicImage::from(f.into_buffer()));
-        Self { img }
+        // But that's okay, we can use the handy DynamicImage::resize which preserves aspect ratio.
+        let mut d_img = image::DynamicImage::from(f.into_buffer());
+        if let Some(opts) = resize {
+            d_img = resize_image(d_img, opts);
+        }
+
+        Self { img: d_img.into() }
     }
 }
 
@@ -71,23 +136,37 @@ pub struct AnimatedImageBuf {
 }
 
 impl AnimatedImageBuf {
+    #[allow(unused)]
+    pub fn from_encoded_buffer(buf: Vec<u8>) -> Result<Self, UploadError> {
+        Self::from_encoded_buffer_resize(buf, &None)
+    }
+
     /// Create from a buffer containing an image encoded in a supported filetype (e.g, GIF).
-    pub fn from_encoded_buffer(buf: Vec<u8>) -> Self {
+    pub fn from_encoded_buffer_resize(
+        buf: Vec<u8>,
+        resize: &Option<ResizeOptions>,
+    ) -> Result<Self, UploadError> {
         use image::AnimationDecoder;
+
+        log::trace!("Creating AnimatedImageBuf... resize={:?}", resize);
 
         let cursor = std::io::Cursor::new(buf);
         match image::guess_format(cursor.get_ref()) {
             Ok(image::ImageFormat::Gif) => {
-                // TODO don't unwrap, check error
-                let decoder = image::codecs::gif::GifDecoder::new(cursor).unwrap();
+                let decoder = image::codecs::gif::GifDecoder::new(cursor).map_err(UploadError::ImageError)?;
 
-                //TODO get rid of unwrap
-                let frames = decoder.into_frames().collect_frames().unwrap();
-                Self {
-                    frames: frames.into_iter().map(RgbFrame::from).collect(),
-                }
+                let frames = decoder
+                    .into_frames()
+                    .collect_frames()
+                    .map_err(UploadError::ImageError)?;
+                Ok(Self {
+                    frames: frames
+                        .into_iter()
+                        .map(|f| RgbFrame::from_frame(f, resize))
+                        .collect(),
+                })
             }
-            Ok(_) => todo!("Handle unsupported animated image type"),
+            Ok(f) => Err(UploadError::UnsupportedImageType(f)),
             Err(_) => todo!("Handle failed guess format"),
         }
     }
@@ -145,6 +224,16 @@ impl UploadManager {
 mod test {
     use super::*;
 
+    fn init_logger() {
+        // Uncomment below to use logger - only really works when running a single test at a time
+        /*
+        simple_logger::SimpleLogger::new()
+            .with_level(log::LevelFilter::Trace)
+            .init()
+            .unwrap();
+        */
+        log::info!("LOG IS RUNNING");
+    }
     // Load file from assets/test/
     fn load_test_file(name: &str) -> Vec<u8> {
         let path: std::path::PathBuf = [env!("CARGO_MANIFEST_DIR"), "assets", "test", name]
@@ -164,11 +253,12 @@ mod test {
 
     #[test]
     fn new_png() {
+        init_logger();
         const FILENAME: &str = "vertical_gradient.png";
         const WIDTH: u32 = 10;
         const HEIGHT: u32 = 10;
         let buf = load_test_file(FILENAME);
-        let image = ImageBuf::from_encoded_buffer(buf);
+        let image = ImageBuf::from_encoded_buffer(buf).unwrap();
 
         assert_eq!(WIDTH, image.get_width());
         assert_eq!(HEIGHT, image.get_height());
@@ -180,14 +270,34 @@ mod test {
     }
 
     #[test]
+    fn new_png_resize() {
+        init_logger();
+        const FILENAME: &str = "vertical_gradient.png";
+        const EXP_RESIZED_WIDTH: u32 = 6;
+        const EXP_RESIZED_HEIGHT: u32 = 6;
+        let buf = load_test_file(FILENAME);
+        let resize = ResizeOptions {
+            width: Some(EXP_RESIZED_WIDTH),
+            height: None,
+            filter: ResizeFilter::Nearest,
+        };
+        let image = ImageBuf::from_encoded_buffer_resize(buf, &Some(resize)).unwrap();
+
+        assert_eq!(EXP_RESIZED_WIDTH, image.get_width());
+        assert_eq!(EXP_RESIZED_HEIGHT, image.get_height());
+        // Just checking dimensions for now.
+    }
+
+    #[test]
     fn new_animated_gif() {
+        init_logger();
         const FILENAME: &str = "gradient.gif";
         const WIDTH: u32 = 10;
         const HEIGHT: u32 = 10;
         const FRAMES: usize = 2;
 
         let buf = load_test_file(FILENAME);
-        let image = AnimatedImageBuf::from_encoded_buffer(buf);
+        let image = AnimatedImageBuf::from_encoded_buffer(buf).unwrap();
 
         assert_eq!(WIDTH, image.get_width());
         assert_eq!(HEIGHT, image.get_height());
@@ -204,5 +314,53 @@ mod test {
         assert_eq!((32, 128, 32), get_pixel_from_raw(frame_1, 0, 0, WIDTH));
         assert_eq!((32, 128, 32), get_pixel_from_raw(frame_1, 0, 1, WIDTH));
         assert_eq!((88, 152, 106), get_pixel_from_raw(frame_1, 3, 6, WIDTH));
+    }
+
+    #[test]
+    fn new_animated_gif_resize() {
+        init_logger();
+        const FILENAME: &str = "gradient.gif";
+        const EXP_RESIZED_WIDTH: u32 = 6;
+        const EXP_RESIZED_HEIGHT: u32 = 6;
+        const FRAMES: usize = 2;
+
+        let resize = ResizeOptions {
+            width: Some(EXP_RESIZED_WIDTH),
+            height: None,
+            filter: ResizeFilter::Nearest,
+        };
+
+        let buf = load_test_file(FILENAME);
+        let image = AnimatedImageBuf::from_encoded_buffer_resize(buf, &Some(resize)).unwrap();
+
+        assert_eq!(EXP_RESIZED_WIDTH, image.get_width());
+        assert_eq!(EXP_RESIZED_HEIGHT, image.get_height());
+
+        let frames: &[RgbFrame] = image.get_frames();
+        assert_eq!(FRAMES, frames.len());
+    }
+
+    #[test]
+    fn new_animated_gif_resize_squish() {
+        init_logger();
+        const FILENAME: &str = "gradient.gif";
+        const EXP_RESIZED_WIDTH: u32 = 10;
+        const EXP_RESIZED_HEIGHT: u32 = 6;
+        const FRAMES: usize = 2;
+
+        let resize = ResizeOptions {
+            width: Some(EXP_RESIZED_WIDTH),
+            height: Some(EXP_RESIZED_HEIGHT),
+            filter: ResizeFilter::Nearest,
+        };
+
+        let buf = load_test_file(FILENAME);
+        let image = AnimatedImageBuf::from_encoded_buffer_resize(buf, &Some(resize)).unwrap();
+
+        assert_eq!(EXP_RESIZED_WIDTH, image.get_width());
+        assert_eq!(EXP_RESIZED_HEIGHT, image.get_height());
+
+        let frames: &[RgbFrame] = image.get_frames();
+        assert_eq!(FRAMES, frames.len());
     }
 }

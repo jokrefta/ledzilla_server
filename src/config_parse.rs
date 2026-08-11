@@ -123,6 +123,7 @@ struct ParsedLedConfig {
 pub struct SimConfig {
     pub width: u32,
     pub height: u32,
+    pub scaling_factor: u32,
     #[serde(default = "default_fps")]
     pub target_fps: u32,
 }

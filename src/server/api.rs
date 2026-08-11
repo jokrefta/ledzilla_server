@@ -6,19 +6,41 @@ use std::{
         mpsc::{SyncSender, channel},
     },
 };
+use thiserror::Error;
 
 use log::{debug, trace};
 use rouille::{Request, Response, input::post::BufferedFile, post_input, try_or_400};
 use strum::VariantNames;
 
 use super::log_err_result;
+use crate::upload::{self, UploadError};
 use crate::{
     graphics_component::ComponentList,
     renderer::{Command, CommandError},
     upload::{AnimatedImageBuf, ImageBuf, UploadManager, UploadedAsset},
 };
 
-const API_VERSION: &str = "0.6.2";
+const API_VERSION: &str = "0.6.3";
+
+#[derive(Debug, Error)]
+pub enum LedzillaApiError {
+    #[error("Json parse error: {0}")]
+    JsonParseFailed(rouille::input::json::JsonError),
+    #[error("{0}")]
+    PostError(rouille::input::post::PostError),
+    #[error("Failed to handle value in multipart field {0}: {1}")]
+    BadMultipartField(String, String),
+    #[error("Asset upload error: {0}")]
+    Upload(UploadError),
+    #[error("{0}")]
+    _General(String),
+}
+
+impl From<UploadError> for LedzillaApiError {
+    fn from(e: UploadError) -> Self {
+        Self::Upload(e)
+    }
+}
 
 #[derive(serde::Serialize)]
 struct DisplayInfo {
@@ -98,7 +120,9 @@ pub fn handle_state_get(renderer: &SyncSender<Command>) -> Response {
 }
 
 pub fn handle_state_post(req: &Request, renderer: &SyncSender<Command>) -> Response {
-    let state: ComponentState = try_or_400!(log_err_result(json_input(req)));
+    let state: ComponentState = try_or_400!(log_err_result(
+        json_input(req).map_err(LedzillaApiError::JsonParseFailed)
+    ));
     let (response_sender, response_receiver) = channel::<Result<(), CommandError>>();
     renderer
         .send(Command::SetComponents {
@@ -145,28 +169,64 @@ pub fn handle_files_get(upload_manager: &Mutex<UploadManager>) -> Response {
     Response::json(&FilesList { files })
 }
 
-pub fn handle_upload(req: &Request, filename: String, upload_manager: &Mutex<UploadManager>) -> Response {
-    let input = try_or_400!(post_input!(req, {
-        width: Option<u32>,
-        height: Option<u32>,
-        // bool means something special in post_input!, so capture as a string and convert later
-        animated: String,
-        file: BufferedFile,
-    }));
-    let is_animated = input.animated.trim().eq_ignore_ascii_case("true");
-    debug!(
-        "File upload request, width={:?} height={:?} animated='{}' ({})",
-        input.width, input.height, input.animated, is_animated
-    );
-    if input.width.is_some() || input.height.is_some() {
-        todo!("Implement image resizing (and test if it works for GIFS!)");
-    }
-
-    let asset = if is_animated {
-        UploadedAsset::AnimatedImage(AnimatedImageBuf::from_encoded_buffer(input.file.data))
+fn mk_image_asset(
+    width: Option<u32>,
+    height: Option<u32>,
+    is_animated: bool,
+    resize_filter: Option<upload::ResizeFilter>,
+    data: Vec<u8>,
+) -> Result<UploadedAsset, LedzillaApiError> {
+    let resize = if width.is_some() || height.is_some() {
+        Some(upload::ResizeOptions {
+            width,
+            height,
+            filter: resize_filter.unwrap_or(upload::ResizeFilter::Triangle),
+        })
     } else {
-        UploadedAsset::Image(ImageBuf::from_encoded_buffer(input.file.data))
+        None
     };
+    let asset = if is_animated {
+        UploadedAsset::AnimatedImage(AnimatedImageBuf::from_encoded_buffer_resize(data, &resize)?)
+    } else {
+        UploadedAsset::Image(ImageBuf::from_encoded_buffer_resize(data, &resize)?)
+    };
+    Ok(asset)
+}
+
+pub fn handle_upload(req: &Request, filename: String, upload_manager: &Mutex<UploadManager>) -> Response {
+    let input = try_or_400!(log_err_result(
+        post_input!(req, {
+            width: Option<u32>,
+            height: Option<u32>,
+            resize_filter: Option<String>,
+            // bool means something special in post_input!, so capture as a string and convert later
+            animated: String,
+            file: BufferedFile,
+        })
+        .map_err(LedzillaApiError::PostError)
+    ));
+    let is_animated = input.animated.trim().eq_ignore_ascii_case("true");
+    let resize_filter: Option<upload::ResizeFilter> = match input.resize_filter {
+        Some(s) => Some(try_or_400!(log_err_result(
+            upload::resize_filter_from_str(&s).ok_or(LedzillaApiError::BadMultipartField(
+                "resize_filter".to_string(),
+                "Invalid filter".to_string()
+            ))
+        ))),
+        None => None,
+    };
+    debug!(
+        "File upload request, width={:?} height={:?} resize_filter={:?} animated='{}' ({})",
+        input.width, input.height, resize_filter, input.animated, is_animated
+    );
+
+    let asset = try_or_400!(mk_image_asset(
+        input.width,
+        input.height,
+        is_animated,
+        resize_filter,
+        input.file.data
+    ));
 
     let mut upload_manager = upload_manager.lock().unwrap();
     match upload_manager.insert(filename, asset) {

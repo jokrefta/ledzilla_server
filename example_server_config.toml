@@ -4,6 +4,7 @@ use_sim = true
 [sim_config]
 width = 256
 height = 64
+scaling_factor = 6
 
 [led_config]
 rows=64

@@ -306,6 +306,7 @@ def test_upload_files_and_modify_files():
         assert_put_file("smol_upload.png", ("dont_care_filename", f, "image/png"), False, True)
         f.seek(0)
         assert_put_file("smol_upload.png", ("dont_care_filename", f, "image/png"), False, False)
+'''
 
 @testcase
 def test_draw_image():
@@ -357,7 +358,43 @@ def test_draw_animated():
     ]}
     assert_post_state(json_state)
     assert_flash_display(2.5)
-'''
+
+@testcase
+def test_draw_image_resize_maintain_aspect_ratio():
+    assert_reset_state()
+
+    with open(ROOT_DIR / "assets" / "test" / "vertical_gradient.png", "rb") as f:
+        assert_put_file("smol_upload.png", ("dont_care_filename", f, "image/png"), False, True, None, 7)
+
+    json_state = {"components": [
+        {
+            "type": "image",
+            "x":  30,
+            "y": 10,
+            "source": "smol_upload.png"
+        }
+    ]}
+    assert_post_state(json_state)
+    assert_flash_display(2)
+
+@testcase
+def test_draw_animated_resize_squish():
+    assert_reset_state()
+
+    with open(ROOT_DIR / "assets" / "test" / "gradient.gif", "rb") as f:
+        assert_put_file("animated.gif", ("dont_care_filename", f, "image/gif"), True, True, 7, 10)
+
+    json_state = {"components": [
+        {
+            "type": "image",
+            "x":  30,
+            "y": 10,
+            "source": "animated.gif",
+            "frame_slowdown": 8
+        }
+    ]}
+    assert_post_state(json_state)
+    assert_flash_display(2.5)
 
 @testcase
 def test_post_state_rect_and_render():

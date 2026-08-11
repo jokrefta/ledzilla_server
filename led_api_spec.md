@@ -1,4 +1,4 @@
-API version: 0.6.2
+API version: 0.6.3
 date: 2026-08-09
 
 # LEDzilla API
@@ -15,7 +15,7 @@ Returns display capabilities.
 {
   "width": 64,
   "height": 32,
-  "api_version": "0.2.0",
+  "api_version": "0.6.3",
   "available_fonts": ["mono_default_4x6", "mono_default_5x7", ...],
 }
 ```
@@ -72,6 +72,10 @@ If a file with the given name already exists, it is replaced.
   - If only one dimension is given, aspect ratio is maintained.
   - If both are given, image is stretched to fit exactly.
   - If neither is given, the file is stored at its original dimensions.
+- `resize_filter` (optional): interpolation filter for resizing.
+  - "nearest_neighbor"
+  - "bilinear" (default)
+  - "bicubic"
 
 **Response:**
 - `201 Created` (for new image) or `204 No Content` (for updating an existing image) on success

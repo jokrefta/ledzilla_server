@@ -29,7 +29,7 @@ fn main() -> ExitCode {
 
     let args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
-        eprintln!("Usage: {} <config filename>", &args[0]);
+        eprintln!("Usage: {} <config filename>", args[0]);
         return ExitCode::FAILURE;
     }
 
@@ -72,7 +72,10 @@ fn mk_sim_display_provider(config: &ConfigParser) -> impl FnMut() -> display::Si
                 embedded_graphics::geometry::Size::new(sim_config.width, sim_config.height),
             );
 
-            let output_settings = OutputSettingsBuilder::new().scale(4).pixel_spacing(1).build();
+            let output_settings = OutputSettingsBuilder::new()
+                .scale(sim_config.scaling_factor)
+                .pixel_spacing(1)
+                .build();
 
             log::info!("Creating simulator window");
             let mut window = Window::new("Test", &output_settings);
