@@ -1,4 +1,3 @@
-use anyhow::Result;
 use std::{
     io::Read,
     sync::{
@@ -6,18 +5,20 @@ use std::{
         mpsc::{SyncSender, channel},
     },
 };
-use thiserror::Error;
 
+use anyhow::Result;
 use log::{debug, trace};
 use rouille::{Request, Response, input::post::BufferedFile, post_input, try_or_400};
 use strum::VariantNames;
+use thiserror::Error;
 
 use super::log_err_result;
-use crate::upload::{self, UploadError};
 use crate::{
+    LedzillaServerConfig,
     graphics_component::ComponentList,
     renderer::{Command, CommandError},
-    upload::{AnimatedImageBuf, ImageBuf, UploadManager, UploadedAsset},
+    upload,
+    upload::{AnimatedImageBuf, ImageBuf, UploadError, UploadManager, UploadedAsset},
 };
 
 const API_VERSION: &str = "0.6.3";
@@ -99,11 +100,10 @@ where
 // These are all called from the rouille worker threads. They must return a Response, or panic.
 // If they panic, Rouille automatically creates a 500 response.
 
-pub fn handle_info_get() -> Response {
-    // TODO - un-hardcode width/height!
+pub fn handle_info_get(config: &LedzillaServerConfig) -> Response {
     Response::json(&DisplayInfo {
-        width: 64 * 4,
-        height: 64,
+        width: config.canvas_size.0,
+        height: config.canvas_size.1,
         api_version: API_VERSION.to_string(),
         available_fonts: crate::graphics_component::Font::VARIANTS,
     })

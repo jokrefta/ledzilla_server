@@ -6,7 +6,7 @@ use std::{
 use log::{debug, error, info, warn};
 use rouille::{Request, Response, router, try_or_404};
 
-use crate::{renderer, upload::UploadManager};
+use crate::{LedzillaServerConfig, renderer, upload::UploadManager};
 
 mod api;
 
@@ -34,6 +34,7 @@ pub fn handle_request(
     renderer_sender: SyncSender<renderer::Command>,
     req: &Request,
     upload_manager: Arc<Mutex<UploadManager>>,
+    config: &LedzillaServerConfig,
 ) -> Response {
     rouille::log_custom(req, log_ok, log_err, || {
         router!(req,
@@ -50,7 +51,7 @@ pub fn handle_request(
             },
             (GET) (/api/info) => {
                 // debug_sender.send(format!("{:?}", req)).unwrap();
-                api::handle_info_get()
+                api::handle_info_get(config)
             },
             (GET) (/api/state) => {
                 // debug_sender.send(format!("{:?}", req)).unwrap();

@@ -2,9 +2,9 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 use display::GraphicsDisplay;
+use renderer::Command;
 use renderer::Renderer;
-
-use crate::{renderer::Command, upload::UploadManager};
+use upload::UploadManager;
 
 pub mod display;
 mod graphics_component;
@@ -43,6 +43,7 @@ where
                 // Must clone again because this closure must implement Fn,
                 // i.e. must be callable many times
                 upload_manager_clone.clone(),
+                &config,
             )
         });
     }
