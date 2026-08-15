@@ -13,6 +13,10 @@ anyhow = "1.0.104"
 colorgrad = "0.8.0"
 embedded-graphics = "0.8.2"
 embedded-graphics-simulator = { version = "0.8.0", optional = true }
+glam = { version = "0.33.3", default-features = false, features = [
+    "std",
+    "i32",
+] }
 image = { version = "0.25.10", default-features = false, features = [
     "bmp",
     "gif",

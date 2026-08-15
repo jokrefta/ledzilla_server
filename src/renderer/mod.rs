@@ -1,8 +1,10 @@
 use self::state::{State, StateWrapper};
 use crate::{
     display::GraphicsDisplay,
-    graphics_component::draw,
-    graphics_component::{ComponentDrawer, ComponentList},
+    graphics_component::{
+        ComponentList,
+        draw::{self, MovableComponentDrawer},
+    },
     upload,
 };
 
@@ -57,8 +59,9 @@ where
     display_provider: F,
     // Should always be valid, but is Option so we can move out of &mut self
     state: StateWrapper<Disp>,
-    components: Vec<ComponentDrawer>,
+    components: Vec<MovableComponentDrawer>,
     upload_manager: Arc<Mutex<upload::UploadManager>>,
+    canvas_size: (u32, u32),
 }
 
 impl<F, Disp> Renderer<F, Disp>
@@ -66,12 +69,17 @@ where
     F: FnMut() -> Disp,
     Disp: GraphicsDisplay + Debug,
 {
-    pub fn new(display_provider: F, upload_manager: Arc<Mutex<upload::UploadManager>>) -> Self {
+    pub fn new(
+        display_provider: F,
+        upload_manager: Arc<Mutex<upload::UploadManager>>,
+        canvas_size: (u32, u32),
+    ) -> Self {
         Self {
             display_provider,
             state: StateWrapper::new(State::Stopped),
             components: Vec::new(),
             upload_manager,
+            canvas_size,
         }
     }
 
@@ -154,7 +162,8 @@ where
                         components,
                         response_sender,
                         &self.upload_manager,
-                        state
+                        state,
+                        self.canvas_size
                     )
                 }
                 // No default case - we want every command to be responded to.
@@ -169,7 +178,7 @@ where
     /// Create display and return next state. Send a true response on the channel.
     fn start_up(
         display_provider: &mut F,
-        components: &[ComponentDrawer],
+        components: &[MovableComponentDrawer],
         success_sender: Sender<bool>,
     ) -> State<Disp> {
         let display = (display_provider)();
@@ -189,7 +198,7 @@ where
     }
 
     /// Take the display, draw onto it, update it, and return it back.
-    fn render(components: &mut Vec<ComponentDrawer>, mut display: Disp) -> Disp {
+    fn render(components: &mut Vec<MovableComponentDrawer>, mut display: Disp) -> Disp {
         // debug!("rendering");
         let canvas = display.get_draw_target();
         for drawer in components {
@@ -201,15 +210,16 @@ where
 
     /// Update the given components and send a success response on the channel.
     fn set_components(
-        to_update: &mut Vec<ComponentDrawer>,
+        to_update: &mut Vec<MovableComponentDrawer>,
         new_components: ComponentList,
         success_sender: Sender<Result<(), CommandError>>,
         upload_manager: &Mutex<upload::UploadManager>,
         curstate: State<Disp>,
+        canvas_size: (u32, u32),
     ) -> State<Disp> {
         debug!("Changing components. New size: {}", new_components.len());
 
-        match Self::make_component_drawers(new_components, upload_manager) {
+        match Self::make_component_drawers(new_components, upload_manager, canvas_size) {
             Ok(drawers) => {
                 *to_update = drawers;
                 success_sender.send(Ok(())).unwrap();
@@ -234,7 +244,7 @@ where
 
     /// Extract copies of the graphics components into a ComponentList and send it
     /// on the channel
-    fn get_components(component_drawers: &[ComponentDrawer], response_sender: Sender<ComponentList>) {
+    fn get_components(component_drawers: &[MovableComponentDrawer], response_sender: Sender<ComponentList>) {
         response_sender
             .send(
                 component_drawers
@@ -250,10 +260,11 @@ where
     fn make_component_drawers(
         from_components: ComponentList,
         upload_manager: &Mutex<upload::UploadManager>,
-    ) -> Result<Vec<ComponentDrawer>, draw::DrawerCreationError> {
+        canvas_size: (u32, u32),
+    ) -> Result<Vec<MovableComponentDrawer>, draw::DrawerCreationError> {
         from_components
             .into_iter()
-            .map(|a| draw::into_drawer(a, upload_manager))
+            .map(|a| draw::MovableComponentDrawer::from_component(a, upload_manager, canvas_size))
             .collect()
     }
 }

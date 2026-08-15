@@ -111,7 +111,7 @@ def testcase(func):
 @testcase
 def test_get_info():
     assert_get_info()
-'''
+
 @testcase
 def test_display_on_off():
     assert_reset_state()
@@ -306,7 +306,6 @@ def test_upload_files_and_modify_files():
         assert_put_file("smol_upload.png", ("dont_care_filename", f, "image/png"), False, True)
         f.seek(0)
         assert_put_file("smol_upload.png", ("dont_care_filename", f, "image/png"), False, False)
-'''
 
 @testcase
 def test_draw_image():
@@ -341,7 +340,7 @@ def test_draw_image_nonexistent_file():
     assert_flash_display(1)
 
 @testcase
-def test_draw_animated():
+def test_draw_animated_gif():
     assert_reset_state()
 
     with open(ROOT_DIR / "assets" / "test" / "gradient.gif", "rb") as f:
@@ -401,7 +400,6 @@ def test_post_state_rect_and_render():
     assert_reset_state()
     json_state = {"components": [
         {
-
           "type": "rectangle",
           "x": 30,
           "y": 20,
@@ -426,6 +424,119 @@ def test_post_state_rect_and_render():
     ]}
     assert_post_state(json_state)
     assert_flash_display(2)
+
+
+@testcase
+def test_draw_animated_gif_scrolling():
+    assert_reset_state()
+
+    with open(ROOT_DIR / "assets" / "test" / "gradient.gif", "rb") as f:
+        assert_put_file("animated.gif", ("dont_care_filename", f, "image/gif"), True, True)
+
+    json_state = {"components": [
+        {
+            "type": "image",
+            "x":  30,
+            "y": 10,
+            "source": "animated.gif",
+            "frame_slowdown": 8,
+
+            "motion_config": {
+                "direction_degrees": 180,
+                "distance_per_tick": 2,
+                "periodicity": 270
+            }
+        }
+    ]}
+    assert_post_state(json_state)
+    assert_flash_display(3)
+
+@testcase
+def test_draw_animated_gif_scrolling_diag():
+    assert_reset_state()
+
+    with open(ROOT_DIR / "assets" / "test" / "gradient.gif", "rb") as f:
+        assert_put_file("animated.gif", ("dont_care_filename", f, "image/gif"), True, True)
+
+    json_state = {"components": [
+        {
+            "type": "image",
+            "x":  30,
+            "y": 10,
+            "source": "animated.gif",
+            "frame_slowdown": 8,
+
+            "motion_config": {
+                "direction_degrees": 165,
+                "distance_per_tick": 2,
+                "periodicity": 30
+            }
+        }
+    ]}
+    assert_post_state(json_state)
+    assert_flash_display(2.5)
+
+@testcase
+def test_draw_many_scrolling():
+    assert_reset_state()
+
+    with open(ROOT_DIR / "assets" / "test" / "gradient.gif", "rb") as f:
+        assert_put_file("animated.gif", ("dont_care_filename", f, "image/gif"), True, True)
+
+    json_state = {"components": [
+        {
+            "type": "image",
+            "x":  30,
+            "y": 10,
+            "source": "animated.gif",
+            "frame_slowdown": 8,
+
+            "motion_config": {
+                "direction_degrees": 270,
+                "distance_per_tick": 1,
+                "periodicity": 70
+            }
+        },
+        {
+            "type": "image",
+            "x":  30,
+            "y": 10,
+            "source": "animated.gif",
+            "frame_slowdown": 8,
+
+            "motion_config": {
+                "direction_degrees": 165,
+                "distance_per_tick": 2,
+                "periodicity": 30
+            }
+        },
+        {
+            "type": "rectangle",
+            "x": 120,
+            "y": 50,
+            "width": 80,
+            "height": 10,
+            "border_color": {
+                "type": "animated",
+                "duration": 60,
+                "keyframes": [
+                    [0, "#FF0000"],
+                    [20, "0000FF"],
+                    [90, "#00FFFF"],
+                    [100, "#FF0000"]
+                ]
+            },
+            "border_width": 3,
+            "motion_config": {
+                "direction_degrees": 90,
+                "distance_per_tick": 1,
+                "periodicity": 30
+            }
+        }
+    ]}
+    assert_post_state(json_state)
+    assert_flash_display(2.5)
+
 
 
 print("Starting...")

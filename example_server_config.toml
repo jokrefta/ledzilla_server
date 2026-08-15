@@ -1,10 +1,12 @@
 [general_config]
 use_sim = true
+canvas_width = 256
+canvas_height = 64
 
 [sim_config]
 width = 256
 height = 64
-scaling_factor = 6
+scaling_factor = 5
 
 [led_config]
 rows=64

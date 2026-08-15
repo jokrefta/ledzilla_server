@@ -67,6 +67,14 @@ impl ConfigParser {
 
         Ok(config)
     }
+
+    pub fn get_ledzilla_config(&self) -> ledzilla_server::LedzillaServerConfig {
+        let general_config = &self.parsed_config.general_config;
+        ledzilla_server::LedzillaServerConfig {
+            port: general_config.server_port,
+            canvas_size: (general_config.canvas_width, general_config.canvas_height),
+        }
+    }
 }
 
 // pub fn load_led_config(led_config_section: Table)
@@ -94,6 +102,12 @@ struct ParsedConfig {
 #[derive(Debug, Clone, Deserialize)]
 pub struct GeneralConfig {
     pub use_sim: bool,
+
+    // TODO add verification that they match up at least for sim mode
+    /// Canvas width should match the corresponding parameters in the simulator or led config
+    pub canvas_width: u32,
+    /// Canvas height should match the corresponding parameters in the simulator or led config
+    pub canvas_height: u32,
 
     #[serde(default = "default_port")]
     pub server_port: u16,

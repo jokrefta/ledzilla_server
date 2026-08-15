@@ -46,12 +46,18 @@ fn main() -> ExitCode {
         #[cfg(not(feature = "simulator"))]
         panic!("Not compiled with simulator support!");
         #[cfg(feature = "simulator")]
-        run_server(mk_sim_display_provider(&config_parser), gen_params.server_port);
+        run_server(
+            mk_sim_display_provider(&config_parser),
+            config_parser.get_ledzilla_config(),
+        );
     } else {
         #[cfg(not(feature = "led"))]
         panic!("Not compiled with led support!");
         #[cfg(feature = "led")]
-        run_server(mk_led_display_provider(&config_parser), gen_params.server_port);
+        run_server(
+            mk_led_display_provider(&config_parser),
+            config_parser.get_ledzilla_config(),
+        );
     }
 
     // Server will run forever, so commenting this

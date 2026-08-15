@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
 pub use color::ColorSpec;
-pub use draw::ComponentDrawer;
 pub use font::Alignment;
 pub use motion::MotionConfig;
 
@@ -76,6 +75,17 @@ pub enum Component {
     Rectangle(Rectangle),
 }
 
+impl Component {
+    fn get_motion_config(&self) -> Option<&MotionConfig> {
+        match self {
+            Component::Image(c) => c.motion_config.as_ref(),
+            Component::Text(c) => c.motion_config.as_ref(),
+            Component::Line(c) => c.motion_config.as_ref(),
+            Component::Rectangle(c) => c.motion_config.as_ref(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::graphics_component::color;
@@ -126,8 +136,6 @@ mod tests {
         let deserialized_again: T = serde_json::from_str(&serialized).unwrap();
         assert_eq!(*as_rust, deserialized_again);
     }
-
-    // TODO add tests for scroll when implemneted
 
     #[test]
     fn text() {
@@ -338,7 +346,7 @@ mod tests {
     }
 
     #[test]
-    fn rect() {
+    fn scrolling_rect() {
         let as_json = r##"{
             "type": "rectangle",
             "x": 10,
@@ -353,6 +361,11 @@ mod tests {
             "fill_color": {
                 "type": "static",
                 "color": "ffa09e"
+            },
+            "motion_config": {
+                "direction_degrees": 45,
+                "distance_per_tick": 2,
+                "periodicity": 200
             }
         }"##;
 
@@ -364,7 +377,11 @@ mod tests {
             border_width: 3,
             border_color: mk_static_colorspec(160, 85, 0),
             fill_color: Some(mk_static_colorspec(255, 160, 158)),
-            motion_config: None,
+            motion_config: Some(MotionConfig {
+                direction_degrees: 45,
+                distance_per_tick: 2,
+                periodicity: 200,
+            }),
         });
 
         test_deserialization(as_json, &as_rust);
