@@ -70,8 +70,7 @@ impl ScrollingMovementTracker {
         }
 
         let mut current_offsets: VecDeque<glam::prelude::Vec2> = VecDeque::new();
-        let translation_per_tick =
-            vec2_from_direction(config.direction_degrees) * config.distance_per_tick;
+        let translation_per_tick = vec2_from_direction(config.direction_degrees) * config.distance_per_tick;
 
         let repetition_offset = vec2_from_direction(config.direction_degrees) * config.periodicity as f32;
 

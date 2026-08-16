@@ -27,6 +27,13 @@ def assert_get_info():
     print("  Response [{}]: {}".format(resp.status_code, resp.text))
     assert 200 == resp.status_code
 
+def assert_get_fonts():
+    print("Sending GET /info")
+    resp = requests.get(API_ROOT + "info")
+    print("  Response [{}]: {}".format(resp.status_code, resp.text))
+    assert 200 == resp.status_code
+    return resp.json()["available_fonts"]
+
 # requires manual inspection to ensure the components match what is expected
 def assert_get_state():
     print("Sending GET /state")
@@ -108,7 +115,6 @@ def testcase(func):
     test_cases.append(func)
     return func
 
-'''
 @testcase
 def test_get_info():
     assert_get_info()
@@ -284,6 +290,27 @@ def test_post_state_multiple_lines_with_text():
     ]}
     assert_post_state(json_state)
     assert_flash_display(2)
+
+@testcase
+def test_post_state_every_font():
+    assert_reset_state()
+    assert_post_display_on() # Not gonna cycle it off/on for every font, that would take forever
+    for font_name in assert_get_fonts():
+        json_state = {"components": [
+            {
+                "type": "text",
+                "x":  10,
+                "y": 10,
+                "content": "Hello world 1234!",
+                "font": font_name,
+                "color": {"type": "static", "color": "#44AA44"},
+                "alignment": "Left"
+            }
+        ]}
+        assert_post_state(json_state)
+        sleep(0.2)
+
+    assert_post_display_off()
 
 def test_upload_and_delete_file():
     with open(ROOT_DIR / "assets" / "test" / "vertical_gradient.png", "rb") as f:
@@ -477,7 +504,6 @@ def test_draw_animated_gif_scrolling_diag():
     assert_post_state(json_state)
     assert_flash_display(2.5)
 
-'''
 
 @testcase
 def test_draw_many_scrolling():
@@ -539,7 +565,6 @@ def test_draw_many_scrolling():
     ]}
     assert_post_state(json_state)
     assert_flash_display(2.5)
-
 
 
 print("Starting...")

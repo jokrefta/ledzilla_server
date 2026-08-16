@@ -12,7 +12,7 @@ mod motion;
 
 pub type ComponentList = Vec<Component>;
 
-pub type Font = font::Font;
+pub type Font = font::FontName;
 
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
@@ -156,7 +156,7 @@ mod tests {
             x: 1,
             y: 2,
             content: "Hello World".to_string(),
-            font: font::Font::mono_default_5x7,
+            font: font::FontName::mono_default_5x7,
             color: mk_static_colorspec(255, 0, 1),
             alignment: Alignment::Left,
             motion_config: None,

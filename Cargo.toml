@@ -36,6 +36,7 @@ strum_macros = "0.28.0"
 thiserror = "2.0.19"
 time = "0.3.53"
 toml = "1.1.4"
+u8g2-fonts = { version = "0.8.0", features = ["embedded_graphics_textstyle"] }
 
 [profile.release]
 lto = true

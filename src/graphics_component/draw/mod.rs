@@ -1,8 +1,8 @@
 use embedded_graphics::pixelcolor::Rgb888;
 use embedded_graphics::primitives::PrimitiveStyleBuilder;
 use embedded_graphics::{
-    Drawable, geometry as eg_geo, geometry::Dimensions, image as eg_image, mono_font as eg_mono,
-    prelude::Primitive, primitives as eg_prim, text as eg_text, transform::Transform,
+    Drawable, geometry as eg_geo, geometry::Dimensions, image as eg_image, prelude::Primitive,
+    primitives as eg_prim, text as eg_text, transform::Transform,
 };
 use log::trace;
 use thiserror::Error;
@@ -246,13 +246,13 @@ impl TextDrawer {
     fn get_styled_text(&self) -> impl Drawable<Color = Rgb888> + Transform + Dimensions {
         let pos = eg_geo::Point::new(self.component.x, self.component.y);
         trace!("Constructing Text(pos {})", pos);
-        let style = eg_mono::MonoTextStyle::new(self.component.font.get_eg_font(), self.color.get());
-        eg_text::Text::with_alignment(
-            &self.component.content,
-            pos,
-            style,
-            self.component.alignment.into(),
-        )
+        let char_style = self.component.font.get_eg_font(self.color.get());
+        let text_style = eg_text::TextStyleBuilder::new()
+            .alignment(self.component.alignment.into())
+            .baseline(eg_text::Baseline::Top)
+            .build();
+
+        eg_text::Text::with_text_style(&self.component.content, pos, char_style, text_style)
     }
 
     pub fn advance_frame(&mut self) {

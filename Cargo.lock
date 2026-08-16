@@ -740,6 +740,7 @@ dependencies = [
  "thiserror",
  "time",
  "toml",
+ "u8g2-fonts",
 ]
 
 [[package]]
@@ -1612,6 +1613,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "59b11b2b5241ba34be09c3cc85a36e56e48f9888862e19cedf23336d35316ed1"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "u8g2-fonts"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ce3199e4c7d98a0a47ddd5ae9cde5a4e944d316319e3208527de504f4e76032"
+dependencies = [
+ "embedded-graphics",
+ "embedded-graphics-core",
 ]
 
 [[package]]
