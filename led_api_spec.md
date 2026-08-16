@@ -1,5 +1,5 @@
-API version: 0.6.3
-date: 2026-08-09
+API version: 0.6.4
+date: 2026-08-16
 
 # LEDzilla API
 
@@ -118,9 +118,20 @@ repeating them for each component type.
 
 ```json
 "motion_config" : {
-  // TBD
+  "direction_degrees": 180,
+  "distance_per_tick": 0.5,
+  "periodicity": 256
 }
 ```
+
+Allows a component to scroll in one direction, repeating every `periodicity` pixels. `direction_degrees` is any integer from 0
+and 360. `distance_per_tick` is in pixels.
+
+For example, an angle of 180 causes the object to scroll toward the left. If `periodicity` equals display width, then the object 
+will start to wrap around exactly when it reaches the left edge of the screen. 
+If `periodicity` is greater than display width, there will be a delay between reaching the left edge and starting to appear on the right.
+If `periodicity` is less than display width, multiple copies of the component will be visible on the screen at one time.
+
 
 #### Color types
 

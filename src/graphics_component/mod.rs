@@ -379,7 +379,7 @@ mod tests {
             fill_color: Some(mk_static_colorspec(255, 160, 158)),
             motion_config: Some(MotionConfig {
                 direction_degrees: 45,
-                distance_per_tick: 2,
+                distance_per_tick: 2.0,
                 periodicity: 200,
             }),
         });

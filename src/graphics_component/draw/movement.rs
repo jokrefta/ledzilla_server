@@ -11,7 +11,7 @@ fn vec2_from_direction(direction_degrees: u16) -> glam::Vec2 {
 }
 
 pub struct ScrollingMovementConfig {
-    distance_per_tick: u32,
+    distance_per_tick: f32,
     direction_degrees: u16,
     periodicity: u32,
     canvas_size: (u32, u32),
@@ -64,14 +64,14 @@ pub struct ScrollingMovementTracker {
 
 impl ScrollingMovementTracker {
     pub fn new(config: ScrollingMovementConfig) -> Result<Self, String> {
-        if config.distance_per_tick > config.periodicity {
+        if config.distance_per_tick > config.periodicity as f32 {
             // not supported by tick() currently
             return Err("Unsupported when distance_per_tick > periodicity".to_string());
         }
 
         let mut current_offsets: VecDeque<glam::prelude::Vec2> = VecDeque::new();
         let translation_per_tick =
-            vec2_from_direction(config.direction_degrees) * config.distance_per_tick as f32;
+            vec2_from_direction(config.direction_degrees) * config.distance_per_tick;
 
         let repetition_offset = vec2_from_direction(config.direction_degrees) * config.periodicity as f32;
 
@@ -166,9 +166,11 @@ impl ScrollingMovementTracker {
     /// Gets offsets for each instance of the component.
     /// These are rounded to integer coordinates for rendering.
     pub fn get_offsets(&self) -> Vec<glam::IVec2> {
+        // Round by adding 0.5 and flooring because we want .5 to round the same direction whether
+        // positive or negative, which the round() method doesn't do.
         self.current_offsets
             .iter()
-            .map(|v| v.round().as_ivec2())
+            .map(|v| (v + 0.5).floor().as_ivec2())
             .collect()
     }
 

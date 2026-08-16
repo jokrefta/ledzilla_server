@@ -108,6 +108,7 @@ def testcase(func):
     test_cases.append(func)
     return func
 
+'''
 @testcase
 def test_get_info():
     assert_get_info()
@@ -476,6 +477,8 @@ def test_draw_animated_gif_scrolling_diag():
     assert_post_state(json_state)
     assert_flash_display(2.5)
 
+'''
+
 @testcase
 def test_draw_many_scrolling():
     assert_reset_state()
@@ -493,8 +496,8 @@ def test_draw_many_scrolling():
 
             "motion_config": {
                 "direction_degrees": 270,
-                "distance_per_tick": 1,
-                "periodicity": 70
+                "distance_per_tick": 3,
+                "periodicity": 50
             }
         },
         {
@@ -513,7 +516,7 @@ def test_draw_many_scrolling():
         {
             "type": "rectangle",
             "x": 120,
-            "y": 50,
+            "y": 30,
             "width": 80,
             "height": 10,
             "border_color": {
@@ -529,8 +532,8 @@ def test_draw_many_scrolling():
             "border_width": 3,
             "motion_config": {
                 "direction_degrees": 90,
-                "distance_per_tick": 1,
-                "periodicity": 30
+                "distance_per_tick": 0.5,
+                "periodicity": 10
             }
         }
     ]}

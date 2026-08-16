@@ -21,7 +21,7 @@ use crate::{
     upload::{AnimatedImageBuf, ImageBuf, UploadError, UploadManager, UploadedAsset},
 };
 
-const API_VERSION: &str = "0.6.3";
+const API_VERSION: &str = "0.6.4";
 
 #[derive(Debug, Error)]
 pub enum LedzillaApiError {
