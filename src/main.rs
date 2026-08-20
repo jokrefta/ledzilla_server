@@ -11,6 +11,7 @@ mod config_parse;
 
 fn main() -> ExitCode {
     if let Err(e) = simple_logger::SimpleLogger::new()
+        .with_level(log::LevelFilter::Info)
         .env()
         .with_module_level("multipart", log::LevelFilter::Warn)
         .with_local_timestamps()
