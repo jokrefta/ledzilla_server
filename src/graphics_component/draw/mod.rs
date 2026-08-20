@@ -69,10 +69,6 @@ impl MovableComponentDrawer {
         })
     }
 
-    pub fn is_static(&self) -> bool {
-        self.movement_tracker.is_none() && self.drawer.is_static()
-    }
-
     /// Draw frame and advance internal state by one frame.
     pub fn draw_next_frame<T>(&mut self, target: &mut T)
     where
@@ -163,16 +159,6 @@ impl ComponentDrawer {
             Self::Rect(drawer) => drawer.get_cloned_component(),
         }
     }
-
-    /// Is the component static or dynamic (changing from frame to frame)?
-    pub fn is_static(&self) -> bool {
-        match self {
-            Self::Image(drawer) => drawer.is_static(),
-            Self::Line(drawer) => drawer.is_static(),
-            Self::Text(drawer) => drawer.is_static(),
-            Self::Rect(drawer) => drawer.is_static(),
-        }
-    }
 }
 
 pub struct LineDrawer {
@@ -208,13 +194,6 @@ impl LineDrawer {
 
     pub fn get_cloned_component(&self) -> super::Component {
         super::Component::Line(self.component.clone())
-    }
-
-    pub fn is_static(&self) -> bool {
-        if let ColorDrawState::Animated(..) = self.color {
-            return false;
-        }
-        true
     }
 }
 
@@ -261,13 +240,6 @@ impl TextDrawer {
 
     pub fn get_cloned_component(&self) -> super::Component {
         super::Component::Text(self.component.clone())
-    }
-
-    pub fn is_static(&self) -> bool {
-        if let ColorDrawState::Animated(..) = self.color {
-            return false;
-        }
-        true
     }
 }
 
@@ -333,13 +305,6 @@ impl ImageDrawer {
     pub fn get_cloned_component(&self) -> super::Component {
         super::Component::Image(self.component.clone())
     }
-
-    pub fn is_static(&self) -> bool {
-        if let upload::UploadedAsset::AnimatedImage(..) = *self.image_data {
-            return false;
-        }
-        true
-    }
 }
 
 impl ImageDrawer {
@@ -403,16 +368,6 @@ impl RectDrawer {
 
     pub fn get_cloned_component(&self) -> super::Component {
         super::Component::Rectangle(self.component.clone())
-    }
-
-    pub fn is_static(&self) -> bool {
-        if let ColorDrawState::Animated(..) = self.border_color {
-            return false;
-        }
-        if let Some(ColorDrawState::Animated(..)) = self.fill_color {
-            return false;
-        }
-        true
     }
 }
 

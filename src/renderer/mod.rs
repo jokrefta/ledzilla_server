@@ -95,20 +95,14 @@ where
     // Run until a command is received, and return it. Since a command may cause a state transition, we
     // break from this function to handle it before re-entering in the updated state.
     fn run_until_next_command(&mut self, command_receiver: &Receiver<Command>) -> Command {
-        // If we are rendering something dynamic, we want to keep doing work in a loop and
-        // do a non-blocking check each iteration to see if a command has come in.
-        // Otherwise, we want to block until a command has come in.
+        // we want to keep doing work in a loop and do a non-blocking check
+        // each iteration to see if a command has come in.
 
         // Note the use of update_display allows us to render without having ownership of the display.
 
         match self.state.get_ref() {
             State::Stopped => command_receiver.recv().unwrap(),
-            State::RenderingStatic { .. } => {
-                self.state
-                    .update_display(|display| Self::render(&mut self.components, display));
-                command_receiver.recv().unwrap()
-            }
-            State::RenderingDynamic { .. } => {
+            State::Rendering { .. } => {
                 loop {
                     self.state
                         .update_display(|display| Self::render(&mut self.components, display));
@@ -133,7 +127,7 @@ where
             match (curstate, command) {
                 //__________________________________________________
                 (State::Stopped, Command::Start {response_sender}) => {
-                    Self::start_up(&mut self.display_provider, &self.components, response_sender)
+                    Self::start_up(&mut self.display_provider, response_sender)
                 }
                 //__________________________________________________
                 (State::Stopped, Command::Stop {response_sender}) => {
@@ -142,11 +136,12 @@ where
                     State::Stopped
                 }
                 //__________________________________________________
-                (State::RenderingStatic {..} | State::RenderingDynamic {..}, Command::Stop {response_sender}) => {
+                (State::Rendering {..}, Command::Stop {response_sender}) => {
                     Self::shut_down(response_sender)
                 }
                 //__________________________________________________
-                (state @ (State::RenderingStatic {..} | State::RenderingDynamic {..}), Command::Start {response_sender}) => {
+                (state @ State::Rendering {..}, Command::Start {response_sender}) => {
+                    // no-op
                     response_sender.send(true).unwrap();
                     state
                 }
@@ -162,9 +157,9 @@ where
                         components,
                         response_sender,
                         &self.upload_manager,
-                        state,
                         self.canvas_size
-                    )
+                    );
+                    state
                 }
                 // No default case - we want every command to be responded to.
             }
@@ -176,19 +171,11 @@ where
     // so we cannot borrow self.
 
     /// Create display and return next state. Send a true response on the channel.
-    fn start_up(
-        display_provider: &mut F,
-        components: &[MovableComponentDrawer],
-        success_sender: Sender<bool>,
-    ) -> State<Disp> {
+    fn start_up(display_provider: &mut F, success_sender: Sender<bool>) -> State<Disp> {
         let display = (display_provider)();
         success_sender.send(true).unwrap();
 
-        if components.iter().all(|c| c.is_static()) {
-            State::RenderingStatic { display }
-        } else {
-            State::RenderingDynamic { display }
-        }
+        State::Rendering { display }
     }
 
     /// Shut down display and return next state. Send a true response on the channel.
@@ -214,30 +201,17 @@ where
         new_components: ComponentList,
         success_sender: Sender<Result<(), CommandError>>,
         upload_manager: &Mutex<upload::UploadManager>,
-        curstate: State<Disp>,
         canvas_size: (u32, u32),
-    ) -> State<Disp> {
+    ) {
         debug!("Changing components. New size: {}", new_components.len());
 
         match Self::make_component_drawers(new_components, upload_manager, canvas_size) {
             Ok(drawers) => {
                 *to_update = drawers;
                 success_sender.send(Ok(())).unwrap();
-
-                match curstate {
-                    State::Stopped => curstate,
-                    State::RenderingStatic { display } | State::RenderingDynamic { display } => {
-                        if to_update.iter().all(|c| c.is_static()) {
-                            State::RenderingStatic { display }
-                        } else {
-                            State::RenderingDynamic { display }
-                        }
-                    }
-                }
             }
             Err(e) => {
                 success_sender.send(Err(e.into())).unwrap();
-                curstate
             }
         }
     }

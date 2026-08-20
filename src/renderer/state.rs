@@ -7,8 +7,7 @@ where
     Disp: GraphicsDisplay + Debug,
 {
     Stopped,
-    RenderingStatic { display: Disp },
-    RenderingDynamic { display: Disp },
+    Rendering { display: Disp },
 }
 
 impl<Disp> Display for State<Disp>
@@ -18,12 +17,16 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             State::Stopped => write!(f, "Stopped"),
-            State::RenderingStatic { .. } => write!(f, "RenderingStatic"),
-            State::RenderingDynamic { .. } => write!(f, "RenderingDynamic"),
+            State::Rendering { .. } => write!(f, "Rendering"),
         }
     }
 }
 
+/// Wraps the state.
+/// The underlying state enum is wrapped in an Option. That is because we want
+/// to consume the state on transitions, even when only a mut reference is held.
+/// This can be done using take() with an option.
+/// To enforce the invariant that state can never be None, this wrapper was created.
 #[derive(Debug)]
 pub struct StateWrapper<Disp: GraphicsDisplay + Debug> {
     state: Option<State<Disp>>,
@@ -54,8 +57,7 @@ impl<Disp: GraphicsDisplay + Debug> StateWrapper<Disp> {
                 log::warn!("Nothing to do for state update in state Stopped");
                 state
             }
-            State::RenderingStatic { display } => State::RenderingStatic { display: f(display) },
-            State::RenderingDynamic { display } => State::RenderingDynamic { display: f(display) },
+            State::Rendering { display } => State::Rendering { display: f(display) },
         });
     }
 
