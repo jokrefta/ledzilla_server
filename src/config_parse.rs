@@ -29,6 +29,8 @@ impl ConfigParser {
     #[cfg(feature = "led")]
     pub fn get_led_config(&self) -> Result<RGBMatrixConfig, String> {
         use std::str::FromStr;
+
+use rpi_led_panel::HardwareMapping;
         let mut config = rpi_led_panel::RGBMatrixConfig::default();
         let parsed_led_config = &self.parsed_config.led_config;
 
@@ -64,6 +66,9 @@ impl ConfigParser {
 
         // Some information comes from the main game config section
         config.refresh_rate = parsed_led_config.refresh_rate as usize;
+
+        // In the current rpi_led_panel version this is not defaulted properly so set it explicitly
+        config.hardware_mapping = HardwareMapping::regular();
 
         Ok(config)
     }
