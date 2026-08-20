@@ -11,5 +11,6 @@ tools/test-client has some examplesof using python to interact with it.
     - maybe other shapes (circles, polygon?)
 - Add support for special patterns in text (e.g, "{TIME}" to display current time - allows user to make a clock or 
   something without needing HTTP request every second)
-- get claude to make web GUI
+- web GUI improvements
+  - BUG- seems you have to upload a file twice (or reload) for it to be available in GUI
 

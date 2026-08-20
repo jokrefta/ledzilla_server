@@ -9,7 +9,7 @@
   --danger: #ff4757;
   --ok: #2ed573;
   --text: #dde3f0;
-  --text-muted: #5a6478;
+  --text-muted: #7b869c;
   --font-mono: "JetBrains Mono", "Fira Code", monospace;
   --font-ui: "Inter", system-ui, sans-serif;
   --radius: 6px;
@@ -53,7 +53,7 @@ header h1 {
 /* ── Main layout ── */
 main {
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: 1fr 360px;
   overflow: hidden;
 }
 
@@ -145,7 +145,7 @@ main {
 .field {
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: flex-start;
   gap: 4px;
 }
 
@@ -157,6 +157,7 @@ main {
   letter-spacing: 0.06em;
   min-width: 100px;
   flex-shrink: 0;
+  padding-top: 8px;
 }
 
 .field input,
@@ -182,6 +183,109 @@ main {
 .field textarea {
   resize: vertical;
   min-height: 60px;
+}
+
+/* ── Composite field widgets (color / motion) ── */
+.color-field,
+.motion-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.color-field > select {
+  align-self: flex-start;
+}
+
+.color-field input[type="color"] {
+  width: 48px;
+  height: 30px;
+  padding: 2px;
+  cursor: pointer;
+}
+
+.color-animated {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.keyframe-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.keyframe-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.keyframe-row input[type="number"] {
+  width: 64px;
+}
+
+.keyframe-row input[type="color"] {
+  width: 40px;
+  height: 28px;
+  padding: 2px;
+}
+
+.keyframe-row .btn-remove {
+  align-self: center;
+  padding: 2px 8px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.sub-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sub-field-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  min-width: 130px;
+  flex-shrink: 0;
+}
+
+.sub-field input[type="number"],
+.sub-field input[type="text"] {
+  width: 100px;
+}
+
+/* ── Optional field wrapper (checkbox to enable) ── */
+.optional-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.optional-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.optional-body {
+  padding-left: 4px;
+  border-left: 2px solid var(--border);
+  padding: 8px 0 8px 12px;
 }
 
 /* ── Buttons ── */
@@ -221,6 +325,14 @@ main {
 .btn-remove:hover {
   background: rgba(255, 71, 87, 0.12);
   opacity: 1;
+}
+
+.btn-secondary {
+  width: 100%;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  margin-top: 8px;
 }
 
 /* ── Add component row ── */
@@ -321,12 +433,74 @@ hr {
   box-shadow: 0 0 12px var(--accent-glow);
 }
 
-.btn-secondary {
+/* ── File manager ── */
+#file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.file-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.file-row-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-list-empty {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 6px 2px;
+}
+
+.file-upload-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.file-upload-form input[type="text"],
+.file-upload-form input[type="file"],
+.file-upload-form select {
   width: 100%;
   background: var(--surface-2);
-  color: var(--text);
   border: 1px solid var(--border);
-  margin-top: 8px;
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-ui);
+  /* padding: 7px 10px; */
+}
+
+.upload-resize-row {
+  display: flex;
+  gap: 6px;
+}
+
+.upload-resize-row input {
+  width: 0;
+  flex: 1;
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.upload-resize-row select {
+  flex: 1.4;
+  font-size: 11px;
 }
 
 /* ── Activity log ── */

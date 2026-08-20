@@ -16,6 +16,7 @@ mod upload;
 pub struct LedzillaServerConfig {
     pub ip: String,
     pub port: u16,
+    pub content_root: String,
     pub canvas_size: (u32, u32),
 }
 

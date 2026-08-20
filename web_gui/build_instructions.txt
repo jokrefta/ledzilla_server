@@ -1,0 +1,9 @@
+# In web_gui folder:
+
+# One time setup
+npm install
+
+# To build
+npm run build
+
+

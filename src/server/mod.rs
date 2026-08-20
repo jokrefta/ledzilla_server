@@ -43,7 +43,7 @@ pub fn handle_request(
                 api::handle_delete_file(&name, &upload_manager)
             },
             (GET) (/) => {
-                let index = try_or_404!(log_err_result(File::open("web_content/index.html")));
+                let index = try_or_404!(log_err_result(File::open(config.content_root.clone() + "/index.html")));
                 Response::from_file("text/html", index)
             },
             (GET) (/api/files) => {
@@ -74,7 +74,7 @@ pub fn handle_request(
             },
             _ => {
                 if req.method() == "GET" {
-                    rouille::match_assets(req, "web_content/")
+                    rouille::match_assets(req, &config.content_root)
                 }
                 else {
                     Response::empty_404()

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LEDzilla</title>
+  <link rel="stylesheet" href="ledzilla.css" />
+</head>
+<body>
+
+<header>
+  <h1>LEDzilla</h1>
+</header>
+
+<main>
+  <section id="component-panel">
+    <div class="panel-header">
+      <h2>Components</h2>
+    </div>
+
+    <div id="component-list"></div>
+    <div id="empty-state">
+      <span class="icon">▣</span>
+      <span>No components yet — add one below</span>
+    </div>
+
+    <hr />
+    <div class="panel-header"><h2>Add component</h2></div>
+    <div id="add-component">
+      <!-- populated from COMPONENT_TYPES -->
+    </div>
+  </section>
+
+  <aside id="sidebar">
+    <div class="sidebar-section">
+      <h2>Display info</h2>
+      <div id="display-info">—</div>
+    </div>
+
+    <div class="sidebar-section">
+      <h2>Files</h2>
+      <div id="file-list"></div>
+
+      <form id="file-upload-form" class="file-upload-form">
+        <input id="upload-file" type="file" accept="image/*" required />
+        <input id="upload-name" type="text" placeholder="name on device" required />
+
+        <label class="sub-field">
+          <input id="upload-animated" type="checkbox" />
+          Animated (GIF)
+        </label>
+
+        <div class="upload-resize-row">
+          <input id="upload-width" type="number" placeholder="width" min="1" />
+          <input id="upload-height" type="number" placeholder="height" min="1" />
+          <select id="upload-filter">
+            <option value="">bilinear (default)</option>
+            <option value="nearest_neighbor">nearest_neighbor</option>
+            <option value="bicubic">bicubic</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn btn-secondary">Upload</button>
+      </form>
+    </div>
+
+    <div class="sidebar-section">
+      <h2>Display power</h2>
+      <div class="controls-row">
+        <button id="btn-display-on"  class="btn btn-on">Turn on</button>
+        <button id="btn-display-off" class="btn btn-off">Turn off</button>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <h2>State</h2>
+      <button id="btn-push-state" class="btn btn-primary">Push state to display</button>
+      <button id="btn-pull-state" class="btn btn-secondary">Pull state from display</button>
+    </div>
+
+    <div class="sidebar-section" style="flex:1;display:flex;flex-direction:column;">
+      <h2>Activity log</h2>
+      <div id="log"></div>
+    </div>
+  </aside>
+</main>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>

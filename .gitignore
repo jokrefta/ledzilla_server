@@ -1,3 +1,6 @@
 /target
 .vscode
 venv
+web_gui/node_modules/
+web_gui/web_content/*.js*
+pi_files.tar

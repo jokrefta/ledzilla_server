@@ -79,6 +79,7 @@ impl ConfigParser {
             ip: general_config.server_ip.clone(),
             port: general_config.server_port,
             canvas_size: (general_config.canvas_width, general_config.canvas_height),
+            content_root: general_config.web_content_path.clone(),
         }
     }
 }
@@ -122,6 +123,9 @@ pub struct GeneralConfig {
     pub server_ip: String,
     #[serde(default = "default_port")]
     pub server_port: u16,
+
+    /// Path to root of web content
+    pub web_content_path: String,
 }
 
 // Private as this gets transformed into a RGBMatrixConfig
