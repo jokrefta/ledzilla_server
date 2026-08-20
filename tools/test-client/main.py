@@ -301,7 +301,7 @@ def test_post_state_every_font():
                 "type": "text",
                 "x":  10,
                 "y": 10,
-                "content": "Hello world 1234!",
+                "content": font_name,
                 "font": font_name,
                 "color": {"type": "static", "color": "#44AA44"},
                 "alignment": "Left"
