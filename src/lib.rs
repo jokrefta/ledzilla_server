@@ -14,6 +14,7 @@ mod upload;
 
 #[derive(Debug, Clone)]
 pub struct LedzillaServerConfig {
+    pub ip: String,
     pub port: u16,
     pub canvas_size: (u32, u32),
 }
@@ -24,7 +25,7 @@ where
     Disp: GraphicsDisplay + std::fmt::Debug,
 {
     let (snd, rcv) = std::sync::mpsc::sync_channel::<Command>(2);
-    let ip_port = format!("{}:{}", "127.0.0.1", config.port);
+    let ip_port = format!("{}:{}", config.ip, config.port);
 
     let upload_manager = Arc::new(Mutex::new(UploadManager::new()));
 

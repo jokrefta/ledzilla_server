@@ -30,7 +30,7 @@ impl ConfigParser {
     pub fn get_led_config(&self) -> Result<RGBMatrixConfig, String> {
         use std::str::FromStr;
 
-use rpi_led_panel::HardwareMapping;
+        use rpi_led_panel::HardwareMapping;
         let mut config = rpi_led_panel::RGBMatrixConfig::default();
         let parsed_led_config = &self.parsed_config.led_config;
 
@@ -76,6 +76,7 @@ use rpi_led_panel::HardwareMapping;
     pub fn get_ledzilla_config(&self) -> ledzilla_server::LedzillaServerConfig {
         let general_config = &self.parsed_config.general_config;
         ledzilla_server::LedzillaServerConfig {
+            ip: general_config.server_ip.clone(),
             port: general_config.server_port,
             canvas_size: (general_config.canvas_width, general_config.canvas_height),
         }
@@ -86,6 +87,9 @@ use rpi_led_panel::HardwareMapping;
 
 ////////////////////////////////////////////
 
+fn default_ip() -> String {
+    "127.0.0.1".to_string()
+}
 fn default_port() -> u16 {
     8080
 }
@@ -114,6 +118,8 @@ pub struct GeneralConfig {
     /// Canvas height should match the corresponding parameters in the simulator or led config
     pub canvas_height: u32,
 
+    #[serde(default = "default_ip")]
+    pub server_ip: String,
     #[serde(default = "default_port")]
     pub server_port: u16,
 }

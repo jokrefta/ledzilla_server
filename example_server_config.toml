@@ -2,6 +2,8 @@
 use_sim = true
 canvas_width = 256
 canvas_height = 64
+server_ip = "127.0.0.1"
+server_port = 8080
 
 [sim_config]
 width = 256
