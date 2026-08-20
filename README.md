@@ -6,7 +6,6 @@ tools/test-client has some examplesof using python to interact with it.
 
 #### TODO
 
-- Setup cross compiler configuration and build/test on actual rpi.
 - Additional components in spec 
     - plot - display data on a bar/line graph (like stock prices or whatever)
     - maybe other shapes (circles, polygon?)
