@@ -1,4 +1,5 @@
 import { apiCall } from "./api.js";
+import { log } from "./log.js";
 
 // The current file listing, kept here (not in components.ts) since this
 // module owns it. components.ts reads it through getAvailableFiles().
@@ -42,8 +43,12 @@ function renderFileRow(name: string): HTMLElement {
   deleteBtn.textContent = "Delete";
   deleteBtn.addEventListener("click", async () => {
     if (!confirm(`Delete "${name}" from the device?`)) return;
-    await deleteFile(name);
-    await refreshFileList();
+    try {
+      await deleteFile(name);
+      await refreshFileList();
+    } catch (err) {
+      log(`Failed to delete "${name}": ${(err as Error).message}`, "err");
+    }
   });
 
   row.append(nameSpan, deleteBtn);
@@ -91,16 +96,23 @@ export function initFileManager(): void {
     const name = nameInput.value.trim();
     if (!file || !name) return;
 
-    await uploadFile(
-      name,
-      file,
-      animatedInput.checked,
-      widthInput.value ? Number(widthInput.value) : undefined,
-      heightInput.value ? Number(heightInput.value) : undefined,
-      filterSelect.value || undefined,
-    );
+    try {
+      await uploadFile(
+        name,
+        file,
+        animatedInput.checked,
+        widthInput.value ? Number(widthInput.value) : undefined,
+        heightInput.value ? Number(heightInput.value) : undefined,
+        filterSelect.value || undefined,
+      );
+      form.reset();
+    } catch (err) {
+      log(`Upload of "${name}" failed: ${(err as Error).message}`, "err");
+    }
 
-    form.reset();
+    // Refresh regardless of outcome: even a failed upload may be worth
+    // re-checking (e.g. partial write), and this guarantees the list never
+    // silently goes stale just because the try block above threw.
     await refreshFileList();
   });
 }

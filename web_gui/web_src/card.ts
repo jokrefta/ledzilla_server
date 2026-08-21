@@ -1,9 +1,31 @@
 import { COMPONENT_TYPES } from "./components.js";
 import { renderField, type FieldController } from "./fields.js";
+import type { FieldDef, FieldRow } from "./types.js";
 
 // Each card's field controllers, keyed by field key. Kept out-of-band in a
 // WeakMap rather than on the element itself, so the DOM stays plain.
 const cardControllers = new WeakMap<HTMLElement, Map<string, FieldController>>();
+
+/** Flattens a component type's field rows (which may pair two fields
+ *  together for side-by-side layout) back into a plain list of fields.
+ *  Used anywhere layout doesn't matter and every field just needs visiting. */
+function flattenFields(rows: FieldRow[]): FieldDef[] {
+  return rows.flatMap((row) => (Array.isArray(row) ? row : [row]));
+}
+
+/** Renders a single field (label + input) as one ".field" element and
+ *  registers its controller. Shared by both single and paired rows. */
+function renderFieldElement(field: FieldDef, controllers: Map<string, FieldController>): HTMLElement {
+  const controller = renderField(field);
+  controllers.set(field.key, controller);
+
+  const el = document.createElement("div");
+  el.className = "field";
+  const label = document.createElement("label");
+  label.textContent = field.label;
+  el.append(label, controller.element);
+  return el;
+}
 
 export function createCard(typeId: string, startOpen = true): HTMLElement {
   const typeDef = COMPONENT_TYPES.find((t) => t.id === typeId);
@@ -19,35 +41,68 @@ export function createCard(typeId: string, startOpen = true): HTMLElement {
   header.className = "card-header";
   header.innerHTML = `
     <span class="component-type-badge">${typeId}</span>
-    <span class="component-name">${typeDef.label} ${count}</span>
-    <span class="chevron">▶</span>`;
+    <span class="component-name">${typeDef.label} ${count}</span>`;
   header.addEventListener("click", () => card.classList.toggle("open"));
+
+  // Component order in the list determines draw order in the pushed state
+  // (pushState() serializes cards in DOM order), so reordering here is
+  // just moving DOM nodes around — no changes needed to serialization.
+  const headerActions = document.createElement("div");
+  headerActions.className = "card-header-actions";
+
+  const moveUpBtn = document.createElement("button");
+  moveUpBtn.className = "btn btn-icon";
+  moveUpBtn.textContent = "▲";
+  moveUpBtn.title = "Move up";
+  moveUpBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    // No-op (via optional chaining) when already first in the list.
+    card.previousElementSibling?.before(card);
+  });
+
+  const moveDownBtn = document.createElement("button");
+  moveDownBtn.className = "btn btn-icon";
+  moveDownBtn.textContent = "▼";
+  moveDownBtn.title = "Move down";
+  moveDownBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    // No-op (via optional chaining) when already last in the list.
+    card.nextElementSibling?.after(card);
+  });
+
+  const removeBtn = document.createElement("button");
+  removeBtn.className = "btn btn-icon btn-remove";
+  removeBtn.textContent = "✕";
+  removeBtn.title = "Remove";
+  removeBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    card.remove();
+    updateEmptyState();
+  });
+
+  const chevron = document.createElement("span");
+  chevron.className = "chevron";
+  chevron.textContent = "▶";
+
+  headerActions.append(moveUpBtn, moveDownBtn, removeBtn, chevron);
+  header.appendChild(headerActions);
 
   const body = document.createElement("div");
   body.className = "card-body";
 
   const controllers = new Map<string, FieldController>();
-  typeDef.fields.forEach((field) => {
-    const controller = renderField(field);
-    controllers.set(field.key, controller);
-
-    const row = document.createElement("div");
-    row.className = "field";
-    const label = document.createElement("label");
-    label.textContent = field.label;
-    row.append(label, controller.element);
-    body.appendChild(row);
+  typeDef.fields.forEach((row) => {
+    const rowEl = document.createElement("div");
+    rowEl.className = "field-row";
+    if (Array.isArray(row)) {
+      rowEl.classList.add("field-row-paired");
+      row.forEach((field) => rowEl.appendChild(renderFieldElement(field, controllers)));
+    } else {
+      rowEl.appendChild(renderFieldElement(row, controllers));
+    }
+    body.appendChild(rowEl);
   });
   cardControllers.set(card, controllers);
-
-  const removeBtn = document.createElement("button");
-  removeBtn.className = "btn btn-remove";
-  removeBtn.textContent = "Remove";
-  removeBtn.addEventListener("click", () => {
-    card.remove();
-    updateEmptyState();
-  });
-  body.appendChild(removeBtn);
 
   card.append(header, body);
   return card;
@@ -97,7 +152,7 @@ export function loadComponentsFromState(components: Array<Record<string, unknown
     list.appendChild(card);
 
     const controllers = cardControllers.get(card)!;
-    typeDef.fields.forEach((field) => {
+    flattenFields(typeDef.fields).forEach((field) => {
       const controller = controllers.get(field.key);
       const value = comp[field.key];
       if (controller?.setValue && value !== undefined) {

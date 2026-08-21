@@ -40,7 +40,16 @@ export async function apiCall(method: string, path: string, body?: object, isFor
   }
 
   log(`${res.status} OK`, "ok");
-  return text ? JSON.parse(text) : null;
+
+  // Not every successful response is JSON (e.g. PUT /files/<name> returns a
+  // plain-text confirmation message on 201). Only attempt to parse bodies
+  // that actually claim to be JSON; anything else is treated as "no useful
+  // payload" rather than throwing a SyntaxError out of this call.
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!text || !contentType.includes("application/json")) {
+    return null;
+  }
+  return JSON.parse(text);
 }
 
 export const api = {

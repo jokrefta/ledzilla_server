@@ -2,14 +2,16 @@
   --bg: #0d0f14;
   --surface: #161a23;
   --surface-2: #1e2330;
+  --surface-3: #262c3f;
   --border: #2a3045;
+  --border-strong: #3c4460;
   --accent: #00e5ff;
   --accent-dim: rgba(0, 229, 255, 0.12);
   --accent-glow: rgba(0, 229, 255, 0.35);
   --danger: #ff4757;
   --ok: #2ed573;
   --text: #dde3f0;
-  --text-muted: #7b869c;
+  --text-muted: #8b96ac;
   --font-mono: "JetBrains Mono", "Fira Code", monospace;
   --font-ui: "Inter", system-ui, sans-serif;
   --radius: 6px;
@@ -32,6 +34,23 @@ body {
   grid-template-rows: auto 1fr;
 }
 
+h1 {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 18px var(--accent-glow);
+}
+
+h2 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  font-weight: 650;
+}
+
 /* ── Header ── */
 header {
   display: flex;
@@ -39,15 +58,6 @@ header {
   padding: 14px 24px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
-}
-
-header h1 {
-  font-family: var(--font-mono);
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--accent);
-  letter-spacing: 0.04em;
-  text-shadow: 0 0 18px var(--accent-glow);
 }
 
 /* ── Main layout ── */
@@ -73,18 +83,10 @@ main {
   justify-content: space-between;
 }
 
-.panel-header h2 {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-muted);
-  font-weight: 600;
-}
-
 /* ── Component card ── */
 .component-card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
   overflow: hidden;
 }
@@ -96,10 +98,11 @@ main {
   padding: 10px 14px;
   cursor: pointer;
   user-select: none;
+  background: var(--surface-2);
 }
 
 .card-header:hover {
-  background: var(--surface-2);
+  background: var(--surface-3);
 }
 
 .component-type-badge {
@@ -142,6 +145,35 @@ main {
 }
 
 /* ── Form fields ── */
+.field-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.field-row-paired {
+  flex-direction: row;
+  gap: 35px;
+}
+
+.field-row-paired .field {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.field-row-paired .field label {
+  min-width: 20px;
+}
+
+.field-row-paired .field:first-child label {
+  min-width: 100px;
+}
+
+
+.field-row-paired .field input,
+.field-row-paired .field select {
+  width: 70px;
+}
+
 .field {
   display: flex;
   flex-direction: row;
@@ -335,6 +367,46 @@ main {
   margin-top: 8px;
 }
 
+/* ── Card header actions (move up / move down / remove) ── */
+.card-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.btn-icon {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  line-height: 1;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.btn-icon:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.btn-icon.btn-remove {
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+}
+
+.btn-icon.btn-remove:hover {
+  background: rgba(255, 71, 87, 0.12);
+  color: var(--danger);
+  opacity: 1;
+}
+
 /* ── Add component row ── */
 #add-component {
   display: flex;
@@ -391,11 +463,6 @@ hr {
 }
 
 .sidebar-section h2 {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-muted);
-  font-weight: 600;
   margin-bottom: 10px;
 }
 

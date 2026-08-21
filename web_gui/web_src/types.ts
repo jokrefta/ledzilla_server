@@ -51,12 +51,18 @@ export type FieldDef =
   | ColorFieldDef
   | MotionFieldDef;
 
+/** A single row in a component's field list. Either one field taking the
+ *  full row, or a pair of two fields rendered side by side (e.g. x/y,
+ *  width/height) — pairing is purely a layout concern, it doesn't change
+ *  how the fields serialize. */
+export type FieldRow = FieldDef | [FieldDef, FieldDef];
+
 export interface ComponentTypeDef {
   /** Machine name — matches the "type" field in state JSON. */
   id: string;
   /** Human-readable name shown in the UI. */
   label: string;
-  fields: FieldDef[];
+  fields: FieldRow[];
 }
 
 // ─────────────────────────────────────────────

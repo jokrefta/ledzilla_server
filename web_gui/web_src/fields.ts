@@ -160,6 +160,22 @@ function renderColorField(field: ColorFieldDef): FieldController<Color> {
   const keyframesList = document.createElement("div");
   keyframesList.className = "keyframe-list";
 
+  /** Re-orders the keyframe rows in the DOM to match ascending percent.
+   *  getValue() just reads rows in DOM order, so this is the entire sort —
+   *  no separate data model to keep in sync. appendChild on an existing
+   *  child moves it, so re-appending in sorted order is enough; no need
+   *  to remove anything first. */
+  function sortKeyframeRows(): void {
+    const rows = [...keyframesList.querySelectorAll<HTMLDivElement>(".keyframe-row")];
+    rows
+      .sort((a, b) => {
+        const pctA = Number(a.querySelector<HTMLInputElement>('input[type="number"]')!.value);
+        const pctB = Number(b.querySelector<HTMLInputElement>('input[type="number"]')!.value);
+        return pctA - pctB;
+      })
+      .forEach((row) => keyframesList.appendChild(row));
+  }
+
   function addKeyframeRow(percent: number, color: string) {
     const row = document.createElement("div");
     row.className = "keyframe-row";
@@ -169,6 +185,9 @@ function renderColorField(field: ColorFieldDef): FieldController<Color> {
     pctInput.min = "0";
     pctInput.max = "100";
     pctInput.value = String(percent);
+    // "change" (fires on blur / Enter) rather than "input", so rows don't
+    // jump around mid-keystroke while the user is still typing a value.
+    pctInput.addEventListener("change", sortKeyframeRows);
 
     const colorInput = document.createElement("input");
     colorInput.type = "color";
@@ -182,6 +201,7 @@ function renderColorField(field: ColorFieldDef): FieldController<Color> {
 
     row.append(pctInput, colorInput, removeBtn);
     keyframesList.appendChild(row);
+    sortKeyframeRows();
   }
   // Spec requires keyframes at 0 and 100; seed both so a valid payload
   // is possible without the user having to know that rule up front.
