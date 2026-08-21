@@ -46,7 +46,7 @@ impl TryFrom<color::AnimatedColorSpec> for AnimatedColorDrawState {
     type Error = color::util::GradientBuilderError;
 
     fn try_from(colorspec: color::AnimatedColorSpec) -> Result<Self, Self::Error> {
-        let gradient = color::util::mk_gradient(&colorspec.keyframes, colorspec.duration)?;
+        let gradient = color::util::mk_gradient(colorspec.keyframes(), colorspec.duration())?;
         Ok(Self {
             color_steps: gradient,
             cur_step: 0,

@@ -82,8 +82,23 @@ mod animated_color {
     #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
     #[serde(try_from = "UnvalidedAnimatedColorSpec")]
     pub struct AnimatedColorSpec {
-        pub duration: usize,
-        pub keyframes: Vec<(u8, Color)>,
+        duration: usize,
+        keyframes: Vec<(u8, Color)>,
+    }
+
+    impl AnimatedColorSpec {
+        #[allow(unused)]
+        pub fn new(duration: usize, keyframes: Vec<(u8, Color)>) -> Result<Self, String> {
+            UnvalidedAnimatedColorSpec { duration, keyframes }.try_into()
+        }
+
+        pub fn duration(&self) -> usize {
+            self.duration
+        }
+
+        pub fn keyframes(&self) -> &Vec<(u8, Color)> {
+            &self.keyframes
+        }
     }
 
     impl TryFrom<UnvalidedAnimatedColorSpec> for AnimatedColorSpec {

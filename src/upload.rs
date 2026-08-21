@@ -15,10 +15,12 @@ pub enum UploadedAsset {
 
 #[derive(Debug, Error)]
 pub enum UploadError {
-    #[error("Image error: {0}")]
-    ImageError(image::ImageError),
-    #[error("I/O error?? {0}")]
-    IoError(std::io::Error),
+    #[error("Image error")]
+    ImageError(#[from] image::ImageError),
+
+    #[error("I/O error??")]
+    IoError(#[from] std::io::Error),
+
     #[error("Detected image format is not a supported type: {0:?}")]
     UnsupportedImageType(image::ImageFormat),
 }
@@ -78,11 +80,9 @@ impl ImageBuf {
         resize: &Option<ResizeOptions>,
     ) -> Result<Self, UploadError> {
         let cursor = std::io::Cursor::new(buf);
-        let image_reader = image::ImageReader::new(cursor)
-            .with_guessed_format()
-            .map_err(UploadError::IoError)?;
+        let image_reader = image::ImageReader::new(cursor).with_guessed_format()?;
 
-        let mut d_img: image::DynamicImage = image_reader.decode().map_err(UploadError::ImageError)?;
+        let mut d_img: image::DynamicImage = image_reader.decode()?;
 
         if let Some(opts) = resize {
             d_img = resize_image(d_img, opts);
@@ -153,12 +153,9 @@ impl AnimatedImageBuf {
         let cursor = std::io::Cursor::new(buf);
         match image::guess_format(cursor.get_ref()) {
             Ok(image::ImageFormat::Gif) => {
-                let decoder = image::codecs::gif::GifDecoder::new(cursor).map_err(UploadError::ImageError)?;
+                let decoder = image::codecs::gif::GifDecoder::new(cursor)?;
 
-                let frames = decoder
-                    .into_frames()
-                    .collect_frames()
-                    .map_err(UploadError::ImageError)?;
+                let frames = decoder.into_frames().collect_frames()?;
                 Ok(Self {
                     frames: frames
                         .into_iter()

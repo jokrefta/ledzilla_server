@@ -25,22 +25,20 @@ const API_VERSION: &str = "0.6.4";
 
 #[derive(Debug, Error)]
 pub enum LedzillaApiError {
-    #[error("Json parse error: {0}")]
-    JsonParseFailed(rouille::input::json::JsonError),
-    #[error("{0}")]
-    PostError(rouille::input::post::PostError),
+    #[error("Json parse error")]
+    JsonParseFailed(#[from] rouille::input::json::JsonError),
+
+    #[error("Post or multipart error")]
+    PostError(#[from] rouille::input::post::PostError),
+
     #[error("Failed to handle value in multipart field {0}: {1}")]
     BadMultipartField(String, String),
-    #[error("Asset upload error: {0}")]
-    Upload(UploadError),
+
+    #[error("Asset upload error")]
+    Upload(#[from] UploadError),
+
     #[error("{0}")]
     _General(String),
-}
-
-impl From<UploadError> for LedzillaApiError {
-    fn from(e: UploadError) -> Self {
-        Self::Upload(e)
-    }
 }
 
 #[derive(serde::Serialize)]

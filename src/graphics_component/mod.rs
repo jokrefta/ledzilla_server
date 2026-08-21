@@ -99,7 +99,7 @@ mod tests {
     }
 
     fn mk_animated_colorspec(duration: usize, keyframes: Vec<(u8, color::Color)>) -> color::ColorSpec {
-        ColorSpec::Animated(color::AnimatedColorSpec { duration, keyframes })
+        ColorSpec::Animated(color::AnimatedColorSpec::new( duration, keyframes ).unwrap())
     }
 
     fn assert_failed_deserialization<'a, T>(as_json: &'a str)
