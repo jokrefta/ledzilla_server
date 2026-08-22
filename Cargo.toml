@@ -24,7 +24,7 @@ image = { version = "0.25.10", default-features = false, features = [
     "png",
     "webp",
 ] }
-log = "0.4.33"
+log = {version = "0.4.33", features = ["serde"] }
 rouille = { version = "3.6.2", default-features = false }
 rpi-led-panel = { version = "0.8.1", optional = true }
 serde = { version = "1.0.228", features = ["derive"] }

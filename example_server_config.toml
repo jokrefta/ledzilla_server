@@ -1,7 +1,13 @@
 [general_config]
 use_sim = true
+
+[ledzilla_config]
+fps_log_lvl = "info"
+
+# Must match the LED or sim configuration below
 canvas_width = 256
 canvas_height = 64
+
 server_ip = "127.0.0.1"
 web_content_path = "web_gui/web_content/"
 server_port = 8080

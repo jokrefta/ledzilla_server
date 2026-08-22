@@ -1,5 +1,6 @@
 use self::state::{State, StateWrapper};
 use crate::{
+    LedzillaServerConfig,
     display::GraphicsDisplay,
     graphics_component::{
         ComponentList,
@@ -61,7 +62,7 @@ where
     state: StateWrapper<Disp>,
     components: Vec<MovableComponentDrawer>,
     upload_manager: Arc<Mutex<upload::UploadManager>>,
-    canvas_size: (u32, u32),
+    config: LedzillaServerConfig,
 }
 
 impl<F, Disp> Renderer<F, Disp>
@@ -72,14 +73,14 @@ where
     pub fn new(
         display_provider: F,
         upload_manager: Arc<Mutex<upload::UploadManager>>,
-        canvas_size: (u32, u32),
+        config: LedzillaServerConfig,
     ) -> Self {
         Self {
             display_provider,
             state: StateWrapper::new(State::Stopped),
             components: Vec::new(),
             upload_manager,
-            canvas_size,
+            config,
         }
     }
 
@@ -102,10 +103,11 @@ where
 
         match self.state.get_ref() {
             State::Stopped => command_receiver.recv().unwrap(),
-            State::Rendering { .. } => {
+            State::Rendering(..) => {
                 loop {
-                    self.state
-                        .update_display(|display| Self::render(&mut self.components, display));
+                    self.state.update_rendering_state(|rs| {
+                        Self::render(&mut self.components, rs, self.config.fps_log_lvl)
+                    });
 
                     // Early return if command found
                     match command_receiver.try_recv() {
@@ -157,7 +159,7 @@ where
                         components,
                         response_sender,
                         &self.upload_manager,
-                        self.canvas_size
+                        self.config.canvas_size
                     );
                     state
                 }
@@ -175,7 +177,10 @@ where
         let display = (display_provider)();
         success_sender.send(true).unwrap();
 
-        State::Rendering { display }
+        State::Rendering(state::RenderingState {
+            display,
+            recent_frame_timestamps: vec![],
+        })
     }
 
     /// Shut down display and return next state. Send a true response on the channel.
@@ -185,14 +190,43 @@ where
     }
 
     /// Take the display, draw onto it, update it, and return it back.
-    fn render(components: &mut Vec<MovableComponentDrawer>, mut display: Disp) -> Disp {
+    fn render(
+        components: &mut Vec<MovableComponentDrawer>,
+        rendering_state: state::RenderingState<Disp>,
+        fps_log_lvl: log::Level,
+    ) -> state::RenderingState<Disp> {
         // debug!("rendering");
+        let state::RenderingState {
+            mut display,
+            mut recent_frame_timestamps,
+        } = rendering_state;
+
         let canvas = display.get_draw_target();
         for drawer in components {
             drawer.draw_next_frame(canvas);
         }
+        display = display.update_display();
 
-        display.update_display()
+        recent_frame_timestamps.push(std::time::Instant::now());
+        const LOG_THRESH: std::time::Duration = std::time::Duration::from_secs(1);
+        if recent_frame_timestamps.len() > 1
+            && *recent_frame_timestamps.last().unwrap() - *recent_frame_timestamps.first().unwrap()
+                >= LOG_THRESH
+        {
+            log::log!(
+                fps_log_lvl,
+                "FPS: {:.0}",
+                (recent_frame_timestamps.len() - 1) as f32
+                    / (*recent_frame_timestamps.last().unwrap() - *recent_frame_timestamps.first().unwrap())
+                        .as_secs_f32()
+            );
+            recent_frame_timestamps.clear();
+        }
+
+        state::RenderingState {
+            display,
+            recent_frame_timestamps,
+        }
     }
 
     /// Update the given components and send a success response on the channel.

@@ -18,6 +18,7 @@ pub struct LedzillaServerConfig {
     pub port: u16,
     pub content_root: String,
     pub canvas_size: (u32, u32),
+    pub fps_log_lvl: log::Level,
 }
 
 pub fn run_server<Disp, F>(display_provider: F, config: LedzillaServerConfig) -> !
@@ -32,8 +33,9 @@ where
 
     {
         let upload_manager_clone = upload_manager.clone();
+        let config_clone = config.clone();
         thread::spawn(move || {
-            let mut renderer = Renderer::new(display_provider, upload_manager_clone, config.canvas_size);
+            let mut renderer = Renderer::new(display_provider, upload_manager_clone, config_clone);
             renderer.run(rcv);
         });
 

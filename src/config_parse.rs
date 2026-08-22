@@ -74,12 +74,16 @@ impl ConfigParser {
     }
 
     pub fn get_ledzilla_config(&self) -> ledzilla_server::LedzillaServerConfig {
-        let general_config = &self.parsed_config.general_config;
+        let parsed_ledzilla_config = &self.parsed_config.ledzilla_config;
         ledzilla_server::LedzillaServerConfig {
-            ip: general_config.server_ip.clone(),
-            port: general_config.server_port,
-            canvas_size: (general_config.canvas_width, general_config.canvas_height),
-            content_root: general_config.web_content_path.clone(),
+            ip: parsed_ledzilla_config.server_ip.clone(),
+            port: parsed_ledzilla_config.server_port,
+            canvas_size: (
+                parsed_ledzilla_config.canvas_width,
+                parsed_ledzilla_config.canvas_height,
+            ),
+            content_root: parsed_ledzilla_config.web_content_path.clone(),
+            fps_log_lvl: parsed_ledzilla_config.fps_log_lvl,
         }
     }
 }
@@ -101,6 +105,7 @@ fn default_fps() -> u32 {
 #[derive(Debug, Clone, Deserialize)]
 struct ParsedConfig {
     general_config: GeneralConfig,
+    ledzilla_config: ParsedLedzillaConfig,
 
     #[cfg(feature = "led")]
     led_config: ParsedLedConfig,
@@ -112,12 +117,17 @@ struct ParsedConfig {
 #[derive(Debug, Clone, Deserialize)]
 pub struct GeneralConfig {
     pub use_sim: bool,
+}
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct ParsedLedzillaConfig {
     // TODO add verification that they match up at least for sim mode
     /// Canvas width should match the corresponding parameters in the simulator or led config
     pub canvas_width: u32,
     /// Canvas height should match the corresponding parameters in the simulator or led config
     pub canvas_height: u32,
+
+    pub fps_log_lvl: log::Level,
 
     #[serde(default = "default_ip")]
     pub server_ip: String,
