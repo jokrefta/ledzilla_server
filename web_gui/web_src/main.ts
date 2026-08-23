@@ -24,6 +24,7 @@ function init(): void {
   updateEmptyState();
   log("Ready", "info");
   api.probe();
+  api.refreshDisplayPower();
   refreshFileList();
 }
 

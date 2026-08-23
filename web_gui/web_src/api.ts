@@ -8,11 +8,19 @@ const BASE = "/api";
 /** Thin fetch wrapper shared by every module that talks to the API
  *  (this file, and files.ts for the /files endpoints). Logs every call
  *  to the activity log and normalizes 204/error handling. */
-export async function apiCall(method: string, path: string, body?: object, isFormData = false): Promise<any> {
+export async function apiCall(
+  method: string,
+  path: string,
+  body?: object | string,
+  isFormData = false,
+): Promise<any> {
   const opts: RequestInit = { method };
   if (body !== undefined) {
     if (isFormData) {
       opts.body = body as FormData;
+    } else if (typeof body === "string") {
+      opts.headers = { "Content-Type": "text/plain" };
+      opts.body = body;
     } else {
       opts.headers = { "Content-Type": "application/json" };
       opts.body = JSON.stringify(body);
@@ -41,15 +49,31 @@ export async function apiCall(method: string, path: string, body?: object, isFor
 
   log(`${res.status} OK`, "ok");
 
-  // Not every successful response is JSON (e.g. PUT /files/<name> returns a
-  // plain-text confirmation message on 201). Only attempt to parse bodies
-  // that actually claim to be JSON; anything else is treated as "no useful
-  // payload" rather than throwing a SyntaxError out of this call.
+  // Some endpoints return JSON, some return a plain-text body (e.g.
+  // GET /display/on-off-state -> "on"/"off"). Parse JSON when the server
+  // says that's what it sent; otherwise hand back the raw text as-is so
+  // callers that need it (rather than just a success signal) still get it.
+  if (!text) return null;
   const contentType = res.headers.get("content-type") ?? "";
-  if (!text || !contentType.includes("application/json")) {
-    return null;
+  return contentType.includes("application/json") ? JSON.parse(text) : text;
+}
+
+/** Reflects the last-known display power state in the sidebar indicator.
+ *  `null` means "unknown" (e.g. the GET failed or hasn't run yet). */
+function setDisplayPowerIndicator(state: "on" | "off" | null): void {
+  const el = document.getElementById("display-power-status");
+  if (!el) return;
+  el.classList.remove("power-status-on", "power-status-off", "power-status-unknown");
+  if (state === "on") {
+    el.textContent = "● On";
+    el.classList.add("power-status-on");
+  } else if (state === "off") {
+    el.textContent = "● Off";
+    el.classList.add("power-status-off");
+  } else {
+    el.textContent = "● Unknown";
+    el.classList.add("power-status-unknown");
   }
-  return JSON.parse(text);
 }
 
 export const api = {
@@ -79,11 +103,23 @@ export const api = {
     await apiCall("POST", "/state", { components });
   },
 
+  /** GET /display/on-off-state and update the sidebar indicator to match.
+   *  Called on page load, and after every displayOn()/displayOff() so the
+   *  indicator reflects what the server actually reports rather than just
+   *  assuming the POST took effect. */
+  async refreshDisplayPower(): Promise<void> {
+    const raw: string | null = await apiCall("GET", "/display/on-off-state").catch(() => null);
+    const state = raw?.trim();
+    setDisplayPowerIndicator(state === "on" || state === "off" ? state : null);
+  },
+
   async displayOn(): Promise<void> {
-    await apiCall("POST", "/display/on");
+    await apiCall("POST", "/display/on-off-state", "on");
+    await api.refreshDisplayPower();
   },
 
   async displayOff(): Promise<void> {
-    await apiCall("POST", "/display/off");
+    await apiCall("POST", "/display/on-off-state", "off");
+    await api.refreshDisplayPower();
   },
 };

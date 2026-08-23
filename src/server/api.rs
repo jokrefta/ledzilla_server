@@ -21,7 +21,7 @@ use crate::{
     upload::{AnimatedImageBuf, ImageBuf, UploadError, UploadManager, UploadedAsset},
 };
 
-const API_VERSION: &str = "0.6.4";
+const API_VERSION: &str = "0.7.0";
 
 #[derive(Debug, Error)]
 pub enum LedzillaApiError {
@@ -30,6 +30,9 @@ pub enum LedzillaApiError {
 
     #[error("Post or multipart error")]
     PostError(#[from] rouille::input::post::PostError),
+
+    #[error("Failed to extract text body")]
+    TextExtractionError(String),
 
     #[error("Failed to handle value in multipart field {0}: {1}")]
     BadMultipartField(String, String),
@@ -94,6 +97,28 @@ where
     }
 }
 
+fn extract_text_body(request: &Request) -> Result<String, LedzillaApiError> {
+    // TODO: handle encoding ; return NotUtf8 if a non-utf8 charset is sent
+    // if no encoding is specified by the client, the default is `US-ASCII` which is compatible with UTF8
+
+    if let Some(header) = request.header("Content-Type")
+        && !header.starts_with("text/plain")
+    {
+        return Err(LedzillaApiError::TextExtractionError(
+            "Bad content type - expected text/plain".to_string(),
+        ));
+    }
+
+    let body = request.data().unwrap();
+
+    let mut out = Vec::new();
+    body.take(10000)
+        .read_to_end(&mut out)
+        .map_err(|e| LedzillaApiError::_General(format!("IO error? {}", e)))?;
+
+    String::from_utf8(out).map_err(|_| LedzillaApiError::TextExtractionError("Not Utf-8?".to_string()))
+}
+
 // ------------------------ API handlers ------------------------ //
 // These are all called from the rouille worker threads. They must return a Response, or panic.
 // If they panic, Rouille automatically creates a 500 response.
@@ -136,29 +161,47 @@ pub fn handle_state_post(req: &Request, renderer: &SyncSender<Command>) -> Respo
     }
 }
 
-pub fn handle_display_on(renderer: &SyncSender<Command>) -> Response {
+pub fn handle_display_get_on_off(renderer: &SyncSender<Command>) -> Response {
     let (response_sender, response_receiver) = channel::<bool>();
-    trace!("sending display start command");
-    renderer.send(Command::Start { response_sender }).unwrap();
 
-    if !response_receiver.recv().unwrap() {
-        panic!("Failed to start display");
-    }
-    trace!("got display start response");
-    Response::empty_204()
+    renderer
+        .send(Command::GetRunningStatus { response_sender })
+        .unwrap();
+    Response::text(match response_receiver.recv().unwrap() {
+        true => "on",
+        false => "off",
+    })
 }
 
-pub fn handle_display_off(renderer: &SyncSender<Command>) -> Response {
+pub fn handle_display_set_on_off(req: &Request, renderer: &SyncSender<Command>) -> Response {
     let (response_sender, response_receiver) = channel::<bool>();
-    trace!("sending display stop command");
-    renderer.send(Command::Stop { response_sender }).unwrap();
 
-    if !response_receiver.recv().unwrap() {
-        panic!("Failed to stop display");
-    }
-    trace!("got display stop response");
+    try_or_400!(log_err_result(match extract_text_body(req) {
+        Ok(txt) if txt.trim().eq_ignore_ascii_case("off") => {
+            trace!("sending display stop command");
+            renderer.send(Command::Stop { response_sender }).unwrap();
 
-    Response::empty_204()
+            if !response_receiver.recv().unwrap() {
+                panic!("Failed to stop display");
+            }
+            trace!("got display stop response");
+
+            Ok(Response::empty_204())
+        }
+        Ok(txt) if txt.trim().eq_ignore_ascii_case("on") => {
+            trace!("sending display start command");
+            renderer.send(Command::Start { response_sender }).unwrap();
+
+            if !response_receiver.recv().unwrap() {
+                panic!("Failed to start display");
+            }
+            trace!("got display start response");
+            Ok(Response::empty_204())
+        }
+        _ => Err(LedzillaApiError::_General(
+            "Content must be either \"on\" or \"off\"".to_string()
+        )),
+    }))
 }
 
 pub fn handle_files_get(upload_manager: &Mutex<UploadManager>) -> Response {

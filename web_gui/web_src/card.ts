@@ -1,6 +1,7 @@
 import { COMPONENT_TYPES } from "./components.js";
 import { renderField, type FieldController } from "./fields.js";
 import type { FieldDef, FieldRow } from "./types.js";
+import { log } from "./log.js";
 
 // Each card's field controllers, keyed by field key. Kept out-of-band in a
 // WeakMap rather than on the element itself, so the DOM stays plain.
@@ -136,7 +137,7 @@ export function clearAllCards(): void {
 }
 
 /** Rebuilds the component list from a pulled /state response.
- *  Unknown component types are skipped (logged to the console) rather
+ *  Unknown component types are skipped (logged to the activity log) rather
  *  than failing the whole load, since the spec is still evolving. */
 export function loadComponentsFromState(components: Array<Record<string, unknown>>): void {
   clearAllCards();
@@ -145,7 +146,7 @@ export function loadComponentsFromState(components: Array<Record<string, unknown
   components.forEach((comp) => {
     const typeDef = COMPONENT_TYPES.find((t) => t.id === comp.type);
     if (!typeDef) {
-      console.warn("Skipping unknown component type from pulled state:", comp.type);
+      log(`Skipping unknown component type "${comp.type}" from pulled state`, "err");
       return;
     }
     const card = createCard(typeDef.id, false);

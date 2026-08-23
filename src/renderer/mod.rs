@@ -43,6 +43,9 @@ pub enum Command {
     Stop {
         response_sender: Sender<bool>,
     },
+    GetRunningStatus {
+        response_sender: Sender<bool>,
+    },
     GetComponents {
         response_sender: Sender<ComponentList>,
     },
@@ -163,6 +166,18 @@ where
                     );
                     state
                 }
+                //__________________________________________________
+                (state @ State::Rendering(..), Command::GetRunningStatus { response_sender }) => {
+                    response_sender.send(true).unwrap();
+                    state
+                }
+                //__________________________________________________
+                (state @ State::Stopped, Command::GetRunningStatus { response_sender }) => {
+                    response_sender.send(false).unwrap();
+                    state
+                }
+                //__________________________________________________
+
                 // No default case - we want every command to be responded to.
             }
         });

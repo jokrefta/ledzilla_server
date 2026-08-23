@@ -61,13 +61,11 @@ pub fn handle_request(
                 // debug_sender.send(format!("{:?}", req)).unwrap();
                 api::handle_state_post(req, &renderer_sender)
             },
-            (POST) (/api/display/on) => {
-                // debug_sender.send(format!("{:?}", req)).unwrap();
-                api::handle_display_on(&renderer_sender)
+            (GET) (/api/display/on-off-state) => {
+                api::handle_display_get_on_off(&renderer_sender)
             },
-            (POST) (/api/display/off) => {
-                // debug_sender.send(format!("{:?}", req)).unwrap();
-                api::handle_display_off(&renderer_sender)
+            (POST) (/api/display/on-off-state) => {
+                api::handle_display_set_on_off(req, &renderer_sender)
             },
             (PUT) (/api/files/{name}) => {
                 api::handle_upload(req, name, &upload_manager)

@@ -63,7 +63,7 @@ header {
 /* ── Main layout ── */
 main {
   display: grid;
-  grid-template-columns: 1fr 360px;
+  grid-template-columns: 1fr 450px;
   overflow: hidden;
 }
 
@@ -167,7 +167,6 @@ main {
 .field-row-paired .field:first-child label {
   min-width: 100px;
 }
-
 
 .field-row-paired .field input,
 .field-row-paired .field select {
@@ -476,6 +475,26 @@ hr {
 .controls-row {
   display: flex;
   gap: 8px;
+}
+
+.power-status {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  margin-bottom: 8px;
+}
+
+.power-status-on {
+  color: var(--ok);
+}
+
+.power-status-off {
+  color: var(--text-muted);
+}
+
+.power-status-unknown {
+  color: var(--danger);
 }
 
 .btn-on {

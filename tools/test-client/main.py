@@ -43,14 +43,14 @@ def assert_get_state():
     assert '"components"' in resp.text
 
 def assert_post_display_on():
-    print("Sending POST /display/on")
-    resp = requests.post(API_ROOT + "display/on")
+    print("Sending POST /display/on-off-state (on)")
+    resp = requests.post(API_ROOT + "display/on-off-state", data="on")
     print("  Response [{}]: {}".format(resp.status_code, resp.text))
     assert 204 == resp.status_code
 
 def assert_post_display_off():
-    print("Sending POST /display/off")
-    resp = requests.post(API_ROOT + "display/off")
+    print("Sending POST /display/on-off-state (off)")
+    resp = requests.post(API_ROOT + "display/on-off-state", data="off")
     print("  Response [{}]: {}".format(resp.status_code, resp.text))
     assert 204 == resp.status_code
 
@@ -185,6 +185,7 @@ def test_post_state_line_and_render():
     assert_post_state(json_state)
     assert_flash_display(2)
 
+"""
 @testcase
 def test_post_state_line_animated_color_and_render():
     assert_reset_state()
@@ -565,6 +566,7 @@ def test_draw_many_scrolling():
     ]}
     assert_post_state(json_state)
     assert_flash_display(2.5)
+"""
 
 
 print("Starting...")

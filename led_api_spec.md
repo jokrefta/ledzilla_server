@@ -1,5 +1,6 @@
-API version: 0.6.4
-date: 2026-08-16
+API version: 0.7.0
+
+Date: 2026-08-23
 
 # LEDzilla API
 
@@ -15,7 +16,7 @@ Returns display capabilities.
 {
   "width": 64,
   "height": 32,
-  "api_version": "0.6.3",
+  "api_version": "0.7.0",
   "available_fonts": ["mono_default_4x6", "mono_default_5x7", ...],
 }
 ```
@@ -35,7 +36,7 @@ Returns the current display state, reflecting exactly what is on the display.
 ---
 
 ## POST /state
-Replace the current display state. Implicitly turns the display on.
+Replace the current display state.
 Request body is `application/json`.
 
 **Response:**
@@ -45,17 +46,19 @@ Request body is `application/json`.
 
 ---
 
-## POST /display/on
-Turns the display on, resuming rendering of the current state.
+## POST /display/on-off-state
+Must be accompanied by a text body.
+
+If body is "on", turns the display on, resuming rendering of the current state.
+If body is "off", Turns the display off. Stops the refresh loop. State is preserved.
 
 **Response:** `204 No Content`
 
 ---
 
-## POST /display/off
-Turns the display off. Stops the refresh loop. State is preserved.
+## GET /display/on-off-state
 
-**Response:** `204 No Content`
+**Response:** `200` with body `on` or `off`
 
 ---
 
