@@ -15,7 +15,7 @@ use color_state::ColorDrawState;
 
 mod color_state;
 
-mod movement;
+mod movement_state;
 
 /// A struct responsible for drawing a component and keeping track of its movement (e.g, scrolling) if configured.
 ///
@@ -30,7 +30,7 @@ mod movement;
 ///
 pub struct MovableComponentDrawer {
     drawer: ComponentDrawer,
-    movement_tracker: Option<movement::ScrollingMovementTracker>,
+    movement_tracker: Option<movement_state::ScrollingMovementTracker>,
 }
 
 impl MovableComponentDrawer {
@@ -49,8 +49,8 @@ impl MovableComponentDrawer {
             let initial_position = (bbox.top_left.x, bbox.top_left.y);
 
             Some(
-                movement::ScrollingMovementTracker::new(
-                    movement::ScrollingMovementConfig::from_parsed_motion_config(
+                movement_state::ScrollingMovementTracker::new(
+                    movement_state::ScrollingMovementConfig::from_parsed_motion_config(
                         &motion_config,
                         canvas_size,
                         rendered_component_size,
