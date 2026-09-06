@@ -1,0 +1,11 @@
+text_spec = { SOI ~ component* ~ EOI }
+
+component = { plain_text_component | special_component }
+
+plain_text_component = { ("$$" | (!"$" ~ ANY))+ }
+
+special_component = { "${" ~ special_component_body ~ "}" }
+special_component_body = { time_string }
+
+time_string = { "TIME" ~ (" " ~ time_string_args)? }
+time_string_args = { (!"}" ~ ANY)* }

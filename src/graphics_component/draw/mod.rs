@@ -208,6 +208,7 @@ impl From<super::Line> for LineDrawer {
 pub struct TextDrawer {
     component: super::Text,
     color: ColorDrawState,
+    formatted_text: String, // need to own this so get_styled_text() can return a reference to it
 }
 
 impl TextDrawer {
@@ -222,6 +223,12 @@ impl TextDrawer {
         self.get_styled_text().bounding_box()
     }
 
+    /// Re-calculate the contents of the text - only useful if it contains dynamic components like a time value
+    fn update_formatted_text(&mut self) {
+        self.formatted_text =
+            super::text_string::make_string_from_template(&self.component.content, chrono::Local::now);
+    }
+
     fn get_styled_text(&self) -> impl Drawable<Color = Rgb888> + Transform + Dimensions {
         let pos = eg_geo::Point::new(self.component.x, self.component.y);
         trace!("Constructing Text(pos {})", pos);
@@ -231,11 +238,17 @@ impl TextDrawer {
             .baseline(eg_text::Baseline::Top)
             .build();
 
-        eg_text::Text::with_text_style(&self.component.content, pos, char_style, text_style)
+        // Make the formatted string based on the template
+        eg_text::Text::with_text_style(&self.formatted_text, pos, char_style, text_style)
     }
 
     pub fn advance_frame(&mut self) {
         self.color.advance_frame();
+        // This means that any special values (like time) in the displayed text might be slightly
+        // out of date because they are updated when advance_frame() is called rather immediately before drawing.
+        // This shouldn't be noticeable though since the frame rate will be many times per second.
+        // I may move this into draw() if it becomes an issue for some reason.
+        self.update_formatted_text();
     }
 
     pub fn get_cloned_component(&self) -> super::Component {
@@ -246,7 +259,13 @@ impl TextDrawer {
 impl From<super::Text> for TextDrawer {
     fn from(component: super::Text) -> Self {
         let color: ColorDrawState = component.color.clone().into();
-        Self { component, color }
+        let mut inst = Self {
+            component,
+            color,
+            formatted_text: String::new(),
+        };
+        inst.update_formatted_text();
+        inst
     }
 }
 

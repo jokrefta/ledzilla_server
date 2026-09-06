@@ -1,6 +1,6 @@
-API version: 0.7.0
+API version: 0.7.1
 
-Date: 2026-08-23
+Date: 2026-09-03
 
 # LEDzilla API
 
@@ -16,7 +16,7 @@ Returns display capabilities.
 {
   "width": 64,
   "height": 32,
-  "api_version": "0.7.0",
+  "api_version": "0.7.1",
   "available_fonts": ["mono_default_4x6", "mono_default_5x7", ...],
 }
 ```
@@ -203,6 +203,12 @@ Alignments may be "Left", "Center", "Right".
 A list of valid fonts may be retrieved from the INFO endpoint.
 
 `motion_config` is optional.
+
+Certain special character sequences are treated as special when they appear within the content string.
+- `${TIME <fmt string>}` - displays the current time, updated live
+  - Where fmt string is a strftime format string (which must not contain `}`).
+  - Example: `${TIME %Y-%m-%d %H:%M:%S}`
+- `$$` - a literal dollar sign
 
 ---
 

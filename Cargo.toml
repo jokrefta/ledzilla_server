@@ -10,6 +10,12 @@ led = ["dep:rpi-led-panel"]
 
 [dependencies]
 anyhow = "1.0.104"
+chrono = { version = "0.4.45", default-features = false, features = [
+    "alloc",
+    "std",
+    "clock",
+    "now",
+] }
 colorgrad = "0.8.0"
 embedded-graphics = "0.8.2"
 embedded-graphics-simulator = { version = "0.8.0", optional = true }
@@ -24,7 +30,9 @@ image = { version = "0.25.10", default-features = false, features = [
     "png",
     "webp",
 ] }
-log = {version = "0.4.33", features = ["serde"] }
+log = { version = "0.4.33", features = ["serde"] }
+pest = "2.9.1"
+pest_derive = "2.9.1"
 rouille = { version = "3.6.2", default-features = false }
 rpi-led-panel = { version = "0.8.1", optional = true }
 serde = { version = "1.0.228", features = ["derive"] }

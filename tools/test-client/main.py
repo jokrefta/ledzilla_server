@@ -185,7 +185,6 @@ def test_post_state_line_and_render():
     assert_post_state(json_state)
     assert_flash_display(2)
 
-"""
 @testcase
 def test_post_state_line_animated_color_and_render():
     assert_reset_state()
@@ -291,6 +290,23 @@ def test_post_state_multiple_lines_with_text():
     ]}
     assert_post_state(json_state)
     assert_flash_display(2)
+
+@testcase
+def test_post_clock_text():
+    assert_reset_state()
+    json_state = {"components": [
+        {
+            "type": "text",
+            "x":  128,
+            "y": 40,
+            "content": "It's ${TIME %-I:%M:%S} and IU still sucks!",
+            "font": "mono_default_5x7",
+            "color": {"type": "static", "color": "#cfb991"},
+            "alignment": "Center"
+        }
+    ]}
+    assert_post_state(json_state)
+    assert_flash_display(6)
 
 @testcase
 def test_post_state_every_font():
@@ -566,7 +582,6 @@ def test_draw_many_scrolling():
     ]}
     assert_post_state(json_state)
     assert_flash_display(2.5)
-"""
 
 
 print("Starting...")

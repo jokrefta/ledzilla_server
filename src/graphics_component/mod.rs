@@ -4,11 +4,13 @@ use serde_with::skip_serializing_none;
 pub use color::ColorSpec;
 pub use font::Alignment;
 pub use motion::MotionConfig;
+pub use text_string::TextStringTemplate;
 
 mod color;
 pub mod draw;
 mod font;
 mod motion;
+mod text_string;
 
 pub type ComponentList = Vec<Component>;
 
@@ -20,7 +22,7 @@ pub struct Text {
     pub x: i32,
     pub y: i32,
     pub font: Font,
-    pub content: String,
+    pub content: TextStringTemplate,
     pub color: ColorSpec,
     pub alignment: Alignment,
 
@@ -88,6 +90,8 @@ impl Component {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use crate::graphics_component::color;
 
     use super::*;
@@ -155,7 +159,7 @@ mod tests {
         let as_rust = Component::Text(Text {
             x: 1,
             y: 2,
-            content: "Hello World".to_string(),
+            content: TextStringTemplate::from_str("Hello World").unwrap(),
             font: font::FontName::mono_default_5x7,
             color: mk_static_colorspec(255, 0, 1),
             alignment: Alignment::Left,
