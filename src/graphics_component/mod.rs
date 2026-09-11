@@ -67,6 +67,68 @@ pub struct Rectangle {
     pub motion_config: Option<MotionConfig>,
 }
 
+#[skip_serializing_none]
+#[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
+#[serde(tag = "type")]
+#[serde(rename_all = "lowercase")]
+pub enum PlotConfig {
+    Bar {
+        column_width: u32,
+        fill_color: ColorSpec,
+    },
+    Line {
+        line_stroke: u32,
+        line_color: ColorSpec,
+        x_spacing: u32,
+        fill_color: Option<ColorSpec>,
+    },
+}
+
+#[skip_serializing_none]
+#[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
+struct UnvalidatedPlot {
+    plot_config: PlotConfig,
+    height: u32,
+    x: i32,
+    y: i32,
+    plot_y_axis_min: i32,
+    plot_y_axis_max: i32,
+    data: Vec<f32>,
+}
+
+#[skip_serializing_none]
+#[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
+#[serde(try_from = "UnvalidatedPlot")]
+pub struct Plot {
+    plot_config: PlotConfig,
+    height: u32,
+    x: i32,
+    y: i32,
+    plot_y_axis_min: i32,
+    plot_y_axis_max: i32,
+    data: Vec<f32>,
+}
+
+impl TryFrom<UnvalidatedPlot> for Plot {
+    type Error = String;
+
+    fn try_from(unval: UnvalidatedPlot) -> Result<Self, Self::Error> {
+        if !(unval.plot_y_axis_min < unval.plot_y_axis_max) {
+            return Err("bad plot_y_axis_min/max".to_string());
+        }
+
+        Ok(Self {
+            plot_config: unval.plot_config,
+            height: unval.height,
+            x: unval.x,
+            y: unval.y,
+            plot_y_axis_min: unval.plot_y_axis_min,
+            plot_y_axis_max: unval.plot_y_axis_max,
+            data: unval.data,
+        })
+    }
+}
+
 #[derive(Deserialize, Serialize, PartialEq, Debug, Clone)]
 #[serde(tag = "type")]
 #[serde(rename_all = "lowercase")]
@@ -75,6 +137,7 @@ pub enum Component {
     Text(Text),
     Line(Line),
     Rectangle(Rectangle),
+    Plot(Plot),
 }
 
 impl Component {
@@ -84,6 +147,7 @@ impl Component {
             Component::Text(c) => c.motion_config.as_ref(),
             Component::Line(c) => c.motion_config.as_ref(),
             Component::Rectangle(c) => c.motion_config.as_ref(),
+            Component::Plot(_) => None,
         }
     }
 }
@@ -390,5 +454,65 @@ mod tests {
 
         test_deserialization(as_json, &as_rust);
         test_ser_des(&as_rust);
+    }
+
+    #[test]
+    fn plot() {
+        let as_json = r##"{
+            "type": "plot",
+            "plot_config": {
+                "type": "line",
+                "line_stroke": 1,
+                "line_color": {"type": "static", "color" :"#11ffff"} ,
+                "x_spacing": 2,
+                "fill_color": {"type": "static", "color": "#ff1111" }
+            },
+            "height": 40,
+            "x": 2,
+            "y": 10,
+            "plot_y_axis_min": -13,
+            "plot_y_axis_max": 13,
+            "data": [-10, 10, 8, 11, 2]
+        }"##;
+
+        let as_rust = Component::Plot(Plot {
+            plot_config: PlotConfig::Line {
+                line_stroke: 1,
+                line_color: mk_static_colorspec(17, 255, 255),
+                x_spacing: 2,
+                fill_color: Some(mk_static_colorspec(255, 17, 17)),
+            },
+            height: 40,
+            x: 2,
+            y: 10,
+            plot_y_axis_min: -13,
+            plot_y_axis_max: 13,
+            data: vec![-10.0, 10.0, 8.0, 11.0, 2.0],
+        });
+
+        test_deserialization(as_json, &as_rust);
+        test_ser_des(&as_rust);
+    }
+
+    #[test]
+    fn plot_invalid_bound() {
+        assert_failed_deserialization::<Plot>(
+            r##"{
+            "type": "plot",
+            "plot_config": {
+                "type": "line",
+                "line_stroke": 1,
+                "line_color": {"type": "static", "color" :"#11ffff"} ,
+                "x_spacing": 2,
+                "fill_color": {"type": "static", "color": "#ff1111" }
+            },
+            "height": 40,
+            "x": 2,
+            "y": 10,
+            "plot_y_axis_min": 1,
+            "plot_y_axis_max": 0,
+            "data": [-10, 10, 8, 11, 2]
+        }"##,
+        );
     }
 }

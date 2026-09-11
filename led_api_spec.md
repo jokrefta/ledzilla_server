@@ -1,6 +1,6 @@
-API version: 0.7.1
+API version: 0.7.2
 
-Date: 2026-09-03
+Date: 2026-09-10
 
 # LEDzilla API
 
@@ -16,7 +16,7 @@ Returns display capabilities.
 {
   "width": 64,
   "height": 32,
-  "api_version": "0.7.1",
+  "api_version": "0.7.2",
   "available_fonts": ["mono_default_4x6", "mono_default_5x7", ...],
 }
 ```
@@ -266,7 +266,7 @@ rate of the LED display, so the `frame_slowdown` values may need to be determine
 ```json
 {
   "type": "line",
-  "x1":2,
+  "x1": 2,
   "y1": 9,
   "x2": 3,
   "y2": 4,
@@ -278,6 +278,51 @@ rate of the LED display, so the `frame_slowdown` values may need to be determine
 
 `motion_config` is optional.
 
-
-
 ---
+
+### Plot
+
+```json
+{
+  "type": "plot",
+  "plot_config": {
+    "type": "bar",
+    "column_width": 2,
+    "fill_color": { ... },
+  },
+  "height": 40,
+  "x": 2,
+  "y": 10,
+  "plot_y_axis_min": 0,
+  "plot_y_axis_max": 100,
+  "data": [13, 15, 20, 43, 20]
+}
+```
+For a bar plot, each `data` point will result in a single bar.
+
+```json
+{
+  "type": "plot",
+  "plot_config": {
+    "type": "line",
+    "line_stroke": 1,
+    "line_color": { ... },
+    "x_spacing": 2,
+    "fill_color": { ... },
+  },
+  "height": 40,
+  "x": 2,
+  "y": 10,
+  "plot_y_axis_min": -13,
+  "plot_y_axis_max": 13,
+  "data": [-10, 10, 8, 11, 2]
+}
+```
+
+For a line plot, `fill_color` is optional and can be used to fill the area under the line.
+Each data point is a single y-value - it's assumed that the data is evenly spaced on the x-axis.
+
+For all plots, `x` and `y` parameters correspond to the position of the top-left corner of the plot as drawn on the canvas.
+`plot_y_axis_min` and `plot_y_axis_max` control the bounds of the y-axis (and hence the vertical scaling of the data points).
+  
+

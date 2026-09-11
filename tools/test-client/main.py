@@ -584,6 +584,55 @@ def test_draw_many_scrolling():
     assert_flash_display(2.5)
 
 
+@testcase
+def test_plot_line():
+    assert_reset_state()
+
+    json_state = {"components": [
+        {
+            "type": "plot",
+            "plot_config": {
+                "type": "line",
+                "line_stroke": 1,
+                "line_color": {"type": "static", "color" :"#11ffff"} ,
+                "x_spacing": 6,
+                "fill_color": {"type": "static", "color": "#ff1111" }
+            },
+            "height": 30,
+            "x": 2,
+            "y": 10,
+            "plot_y_axis_min": -13,
+            "plot_y_axis_max": 13,
+            "data": [-10, 10, 8, 11, 2, 14, 15]
+        }
+    ]}
+    assert_post_state(json_state)
+    assert_flash_display(4)
+
+@testcase
+def test_plot_bar():
+    assert_reset_state()
+
+    json_state = {"components": [
+        {
+            "type": "plot",
+            "plot_config": {
+                "type": "bar",
+                "column_width": 2,
+                "fill_color": {"type": "static", "color": "#ff1111" }
+            },
+            "height": 30,
+            "x": 2,
+            "y": 10,
+            "plot_y_axis_min": -13,
+            "plot_y_axis_max": 13,
+            "data": [-10, 10, 8, 11, 2, 14, 15, 10, 9]
+        }
+    ]}
+    assert_post_state(json_state)
+    assert_flash_display(4)
+
+
 print("Starting...")
 failures = 0
 for test in test_cases:
