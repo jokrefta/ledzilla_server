@@ -50,7 +50,11 @@ impl MovableComponentDrawer {
                         initial_position,
                     ),
                 )
-                .map_err(DrawerCreationError::_GeneralError)?,
+                .map_err(
+                    // Currently the movement tracker construction fails only when something
+                    // about the motion config is unsupported, so treat as an invalid component spec
+                    DrawerCreationError::BadComponentSpec,
+                )?,
             )
         } else {
             None

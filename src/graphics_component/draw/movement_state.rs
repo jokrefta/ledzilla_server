@@ -69,13 +69,14 @@ impl ScrollingMovementTracker {
             return Err("Unsupported when distance_per_tick > periodicity".to_string());
         }
 
-        let mut current_offsets: VecDeque<glam::prelude::Vec2> = VecDeque::new();
         let translation_per_tick = vec2_from_direction(config.direction_degrees) * config.distance_per_tick;
 
         let repetition_offset = vec2_from_direction(config.direction_degrees) * config.periodicity as f32;
 
         // The coordinate plane is shifted to be relative to the initial component position for
         // all calculations.
+        // We determine the bounds for the object being displayable; if the position offset
+        // falls outside of these computed bounds, then the object is entirely off screen.
         let displayable_x_bounds = (
             -(config.rendered_component_size.0 as f32) - config.initial_pos.x as f32,
             config.canvas_size.0 as f32 - config.initial_pos.x as f32,
@@ -85,6 +86,12 @@ impl ScrollingMovementTracker {
             config.canvas_size.1 as f32 - config.initial_pos.y as f32,
         );
 
+        if is_instance_oob(displayable_x_bounds, displayable_y_bounds, glam::Vec2::ZERO) {
+            return Err("Unsupported when initial position is entirely off screen".to_string());
+        }
+
+        // start out with the initial position (offset 0,0)
+        let mut current_offsets: VecDeque<glam::Vec2> = VecDeque::from(vec![glam::Vec2::ZERO]);
         // prepend all instances that come "before" the initial position
         for i in 1.. {
             let instance = -repetition_offset * i as f32;
@@ -94,7 +101,7 @@ impl ScrollingMovementTracker {
             log::trace!("Pushing offset {} to front", instance);
             current_offsets.push_front(instance);
         }
-        // append the initial position and all instances that come "after" it
+        // append all instances that come "after" it
         for i in 0.. {
             let instance = repetition_offset * i as f32;
             if is_instance_oob(displayable_x_bounds, displayable_y_bounds, instance) {
@@ -186,7 +193,11 @@ impl ScrollingMovementTracker {
     }
 }
 
-/// Check if an instance of the drawn component is out of bounds
+/// Check if an instance of the drawn component is out of bounds.
+///
+/// This function just checks if the given point is within the bounds. If the provided bounds are
+/// properly adjusted to account for the drawn component size, then it will tell us whether the
+/// component is entirely out of bounds or if some portion of it is visible.
 fn is_instance_oob(
     drawable_x_bounds: (f32, f32),
     drawable_y_bounds: (f32, f32),
