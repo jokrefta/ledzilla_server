@@ -1,5 +1,5 @@
 import type { DisplayInfo, DisplayState } from "./types.js";
-import { readCard, loadComponentsFromState } from "./card.js";
+import { buildStateFromCards, loadComponentsFromState } from "./card.js";
 import { setAvailableFonts } from "./components.js";
 import { log } from "./log.js";
 
@@ -95,12 +95,7 @@ export const api = {
   },
 
   async pushState(): Promise<void> {
-    const cards = [...document.querySelectorAll<HTMLElement>(".component-card")];
-    const components = cards.map((card) => {
-      const { type, fields } = readCard(card);
-      return { type, ...fields };
-    });
-    await apiCall("POST", "/state", { components });
+    await apiCall("POST", "/state", buildStateFromCards());
   },
 
   /** GET /display/on-off-state and update the sidebar indicator to match.

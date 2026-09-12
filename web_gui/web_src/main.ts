@@ -3,6 +3,7 @@ import { addComponent, updateEmptyState } from "./card.js";
 import { api } from "./api.js";
 import { log } from "./log.js";
 import { initFileManager, refreshFileList } from "./files.js";
+import { initStateFileControls } from "./state_file.js";
 
 function init(): void {
   const picker = document.getElementById("add-component")!;
@@ -20,6 +21,7 @@ function init(): void {
   document.getElementById("btn-pull-state")!.addEventListener("click", () => api.getState());
 
   initFileManager();
+  initStateFileControls();
 
   updateEmptyState();
   log("Ready", "info");

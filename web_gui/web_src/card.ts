@@ -1,6 +1,6 @@
 import { COMPONENT_TYPES } from "./components.js";
 import { renderField, type FieldController } from "./fields.js";
-import type { FieldDef, FieldRow } from "./types.js";
+import type { FieldDef, FieldRow, DisplayState } from "./types.js";
 import { log } from "./log.js";
 
 // Each card's field controllers, keyed by field key. Kept out-of-band in a
@@ -119,6 +119,18 @@ export function readCard(card: HTMLElement): { type: string; fields: Record<stri
     if (value !== undefined) fields[key] = value;
   });
   return { type: card.dataset.type!, fields };
+}
+
+/** Serializes every component card currently in the list, in DOM order,
+ *  into a DisplayState. Shared by pushState() (POST /state) and the
+ *  "download state" feature — both just need the same JSON. */
+export function buildStateFromCards(): DisplayState {
+  const cards = [...document.querySelectorAll<HTMLElement>(".component-card")];
+  const components = cards.map((card) => {
+    const { type, fields } = readCard(card);
+    return { type, ...fields };
+  });
+  return { components };
 }
 
 export function addComponent(typeId: string): void {

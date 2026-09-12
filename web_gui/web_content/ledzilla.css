@@ -519,6 +519,20 @@ hr {
   box-shadow: 0 0 12px var(--accent-glow);
 }
 
+/* Download/load-JSON pair sits side by side, same row height as
+   .controls-row above, rather than stacking full-width like a lone
+   .btn-secondary normally would. */
+.state-file-row {
+  display: flex;
+  gap: 8px;
+}
+
+.state-file-row .btn {
+  flex: 1;
+  width: auto;
+  margin-top: 8px;
+}
+
 /* ── File manager ── */
 #file-list {
   display: flex;

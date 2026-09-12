@@ -16,6 +16,6 @@ export function log(msg: string, kind: LogKind = ""): void {
   msgSpan.textContent = msg;
 
   row.append(timeSpan, msgSpan);
-  el.appendChild(row);
-  el.scrollTop = el.scrollHeight;
+  el.prepend(row);
+  el.scrollTop = 0;
 }
