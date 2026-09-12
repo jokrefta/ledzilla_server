@@ -17,9 +17,9 @@ pub enum TextTemplatePart {
 
 impl TextTemplatePart {
     fn from_pest_component(component: pest::iterators::Pair<Rule>) -> Result<Self> {
-        dbg!(&component);
+        //dbg!(&component);
         let component_variant = component.into_inner().next().unwrap();
-        dbg!(&component_variant);
+        //dbg!(&component_variant);
         let parsed_template = match component_variant.as_rule() {
             Rule::plain_text_component => {
                 let raw_string = component_variant.as_str().to_string();
