@@ -228,14 +228,26 @@ where
             && *recent_frame_timestamps.last().unwrap() - *recent_frame_timestamps.first().unwrap()
                 >= LOG_THRESH
         {
+            let avg_t = (*recent_frame_timestamps.last().unwrap() - *recent_frame_timestamps.first().unwrap())
+                .as_secs_f32()
+                / (recent_frame_timestamps.len() - 1) as f32;
             log::log!(
                 fps_log_lvl,
-                "FPS: {:.0}",
-                (recent_frame_timestamps.len() - 1) as f32
-                    / (*recent_frame_timestamps.last().unwrap() - *recent_frame_timestamps.first().unwrap())
-                        .as_secs_f32()
+                "Frame rate: {:.0} ({:.1} ms per frame)",
+                1.0 / avg_t,
+                avg_t * 1000.0
             );
             recent_frame_timestamps.clear();
+
+            // If display supports reading refresh rate, also log that
+            if let Some(r) = display.get_refresh_rate() {
+                log::log!(
+                    fps_log_lvl,
+                    "Refresh rate: {} (~{:.1} ms per frame)",
+                    r,
+                    1.0 / r as f32,
+                );
+            }
         }
 
         state::RenderingState {

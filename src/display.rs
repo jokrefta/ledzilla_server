@@ -20,6 +20,10 @@ pub trait GraphicsDisplay {
     fn received_exit_event(&self) -> bool {
         false
     }
+
+    fn get_refresh_rate(&self) -> Option<u32> {
+        None
+    }
 }
 
 #[cfg(feature = "simulator")]
@@ -93,6 +97,10 @@ mod led {
         fn update_display(mut self) -> Self {
             self.current_canvas = self.matrix.update_on_vsync(self.current_canvas);
             self
+        }
+
+        fn get_refresh_rate(&self) -> Option<u32> {
+            Some(self.matrix.get_framerate() as u32)
         }
     }
 
