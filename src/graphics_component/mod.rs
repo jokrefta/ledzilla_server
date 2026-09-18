@@ -91,6 +91,8 @@ struct UnvalidatedPlot {
     height: u32,
     x: i32,
     y: i32,
+    axis_color: Option<ColorSpec>,
+    axis_stroke: Option<u32>,
     plot_y_axis_min: i32,
     plot_y_axis_max: i32,
     data: Vec<f32>,
@@ -104,6 +106,8 @@ pub struct Plot {
     height: u32,
     x: i32,
     y: i32,
+    axis_color: Option<ColorSpec>,
+    axis_stroke: Option<u32>,
     plot_y_axis_min: i32,
     plot_y_axis_max: i32,
     data: Vec<f32>,
@@ -125,6 +129,8 @@ impl TryFrom<UnvalidatedPlot> for Plot {
             plot_y_axis_min: unval.plot_y_axis_min,
             plot_y_axis_max: unval.plot_y_axis_max,
             data: unval.data,
+            axis_color: unval.axis_color,
+            axis_stroke: unval.axis_stroke,
         })
     }
 }
@@ -488,6 +494,8 @@ mod tests {
             plot_y_axis_min: -13,
             plot_y_axis_max: 13,
             data: vec![-10.0, 10.0, 8.0, 11.0, 2.0],
+            axis_color: None,
+            axis_stroke: None,
         });
 
         test_deserialization(as_json, &as_rust);

@@ -599,10 +599,12 @@ def test_plot_line():
                 "fill_color": {"type": "static", "color": "#ff1111" }
             },
             "height": 30,
-            "x": 2,
-            "y": 10,
+            "x": 20,
+            "y": 20,
             "plot_y_axis_min": -13,
             "plot_y_axis_max": 13,
+            "axis_color": {"type": "static", "color": "#ffffff"}, 
+            "axis_stroke": 1,
             "data": [-10, 10, 8, 11, 2, 14, 15]
         }
     ]}

@@ -1,6 +1,6 @@
-API version: 0.7.2
+API version: 0.7.3
 
-Date: 2026-09-10
+Date: 2026-09-17
 
 # LEDzilla API
 
@@ -315,6 +315,8 @@ For a bar plot, each `data` point will result in a single bar.
   "y": 10,
   "plot_y_axis_min": -13,
   "plot_y_axis_max": 13,
+  "axis_color": {...}, 
+  "axis_stroke": 1,
   "data": [-10, 10, 8, 11, 2]
 }
 ```
@@ -322,7 +324,12 @@ For a bar plot, each `data` point will result in a single bar.
 For a line plot, `fill_color` is optional and can be used to fill the area under the line.
 Each data point is a single y-value - it's assumed that the data is evenly spaced on the x-axis.
 
+`axis_color` and `axis_stroke` are optional. By default no axes are drawn. If only the stroke width is specified, the axes will be white.
+
 For all plots, `x` and `y` parameters correspond to the position of the top-left corner of the plot as drawn on the canvas.
+This does not currently account for axes; i.e. the y-axis will be drawn slightly to the left of the `x` parameter.
+Likewise, `height` does not include the height of the x-axis.
+
 `plot_y_axis_min` and `plot_y_axis_max` control the bounds of the y-axis (and hence the vertical scaling of the data points).
   
 
