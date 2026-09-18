@@ -67,8 +67,11 @@ impl ConfigParser {
         // Some information comes from the main game config section
         config.refresh_rate = parsed_led_config.refresh_rate as usize;
 
-        // In the current rpi_led_panel version this is not defaulted properly so set it explicitly
+        // In old rpi_led_panel versions this was not defaulted properly so set it explicitly to be safe
         config.hardware_mapping = HardwareMapping::regular();
+
+        // Need to keep sudo privs to be able to turn display off/on multiple times
+        config.drop_privs = false;
 
         Ok(config)
     }
