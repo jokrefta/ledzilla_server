@@ -261,13 +261,13 @@ pub fn handle_upload(req: &Request, filename: String, upload_manager: &Mutex<Upl
         input.width, input.height, resize_filter, input.animated, is_animated
     );
 
-    let asset = try_or_400!(mk_image_asset(
+    let asset = try_or_400!(log_err_result(mk_image_asset(
         input.width,
         input.height,
         is_animated,
         resize_filter,
         input.file.data
-    ));
+    )));
 
     let mut upload_manager = upload_manager.lock().unwrap();
     match upload_manager.insert(filename, asset) {
@@ -279,9 +279,11 @@ pub fn handle_upload(req: &Request, filename: String, upload_manager: &Mutex<Upl
 
 pub fn handle_delete_file(name: &str, upload_manager: &Mutex<UploadManager>) -> Response {
     let mut upload_manager = upload_manager.lock().unwrap();
-    if upload_manager.try_delete(name).is_ok() {
-        Response::empty_204()
-    } else {
-        Response::empty_404()
+    match upload_manager.try_delete(name) {
+        Ok(_) => Response::empty_204(),
+        Err(e) => {
+            log::warn!("Delete failed - {}", e);
+            Response::empty_404()
+        }
     }
 }

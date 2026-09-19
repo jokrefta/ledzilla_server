@@ -607,6 +607,7 @@ hr {
 #log {
   flex: 1;
   min-height: 160px;
+  max-height: 400px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);

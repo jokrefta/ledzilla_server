@@ -59,6 +59,9 @@ export async function refreshFileList(): Promise<void> {
   const result: { files: string[] } | null = await apiCall("GET", "/files").catch(() => null);
   files = result?.files ?? [];
 
+  // These filenames are URI encoded, so reverse that
+  files = files.map(name => decodeURIComponent(name));
+
   const list = document.getElementById("file-list");
   if (!list) return;
   list.innerHTML = "";

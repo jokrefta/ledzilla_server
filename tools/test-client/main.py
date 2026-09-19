@@ -329,11 +329,13 @@ def test_post_state_every_font():
 
     assert_post_display_off()
 
+@testcase
 def test_upload_and_delete_file():
     with open(ROOT_DIR / "assets" / "test" / "vertical_gradient.png", "rb") as f:
         assert_put_file("smol_upload.png", ("dont_care_filename", f, "image/png"), False, True)
     assert_delete_file("smol_upload.png")
 
+@testcase
 def test_upload_files_and_get_files():
     assert_reset_state()
     with open(ROOT_DIR / "assets" / "test" / "vertical_gradient.png", "rb") as f:
