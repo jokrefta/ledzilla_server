@@ -21,6 +21,18 @@ pub struct LedzillaServerConfig {
     pub fps_log_lvl: log::Level,
 }
 
+#[derive(Debug)]
+pub struct LedzillaServerState {
+    pub last_client_id: Mutex<String>,
+}
+impl Default for LedzillaServerState {
+    fn default() -> Self {
+        Self {
+            last_client_id: Mutex::new(String::new()),
+        }
+    }
+}
+
 pub fn run_server<Disp, F>(display_provider: F, config: LedzillaServerConfig) -> !
 where
     F: Send + FnMut() -> Disp + 'static,
@@ -30,23 +42,26 @@ where
     let ip_port = format!("{}:{}", config.ip, config.port);
 
     let upload_manager = Arc::new(Mutex::new(UploadManager::new()));
+    let server_state = Arc::new(LedzillaServerState::default());
 
     {
-        let upload_manager_clone = upload_manager.clone();
+        let server_state_clone = Arc::clone(&server_state);
+        let upload_manager_clone = Arc::clone(&upload_manager);
         let config_clone = config.clone();
         thread::spawn(move || {
             let mut renderer = Renderer::new(display_provider, upload_manager_clone, config_clone);
             renderer.run(rcv);
         });
 
-        let upload_manager_clone = upload_manager.clone();
+        let upload_manager_clone = Arc::clone(&upload_manager);
         rouille::start_server(ip_port, move |req| {
             server::handle_request(
                 snd.clone(),
                 req,
                 // Must clone again because this closure must implement Fn,
                 // i.e. must be callable many times
-                upload_manager_clone.clone(),
+                Arc::clone(&upload_manager_clone),
+                Arc::clone(&server_state_clone),
                 &config,
             )
         });

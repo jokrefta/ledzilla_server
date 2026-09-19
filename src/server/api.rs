@@ -14,14 +14,13 @@ use thiserror::Error;
 
 use super::log_err_result;
 use crate::{
-    LedzillaServerConfig,
+    LedzillaServerConfig, LedzillaServerState,
     graphics_component::ComponentList,
     renderer::{Command, CommandError},
-    upload,
-    upload::{AnimatedImageBuf, ImageBuf, UploadError, UploadManager, UploadedAsset},
+    upload::{self, AnimatedImageBuf, ImageBuf, UploadError, UploadManager, UploadedAsset},
 };
 
-const API_VERSION: &str = "0.7.3";
+const API_VERSION: &str = "0.8.0";
 
 #[derive(Debug, Error)]
 pub enum LedzillaApiError {
@@ -39,6 +38,9 @@ pub enum LedzillaApiError {
 
     #[error("Asset upload error")]
     Upload(#[from] UploadError),
+
+    #[error("Missing required header: {0}")]
+    MissingRequiredHeader(String),
 
     #[error("{0}")]
     _General(String),
@@ -119,6 +121,13 @@ fn extract_text_body(request: &Request) -> Result<String, LedzillaApiError> {
     String::from_utf8(out).map_err(|_| LedzillaApiError::TextExtractionError("Not Utf-8?".to_string()))
 }
 
+fn extract_client_id_header(request: &Request) -> Result<String, LedzillaApiError> {
+    request
+        .header(super::CLIENT_ID_HEADER)
+        .map(String::from)
+        .ok_or_else(|| LedzillaApiError::MissingRequiredHeader(super::CLIENT_ID_HEADER.to_string()))
+}
+
 // ------------------------ API handlers ------------------------ //
 // These are all called from the rouille worker threads. They must return a Response, or panic.
 // If they panic, Rouille automatically creates a 500 response.
@@ -142,7 +151,13 @@ pub fn handle_state_get(renderer: &SyncSender<Command>) -> Response {
     Response::json(&ComponentState { components })
 }
 
-pub fn handle_state_post(req: &Request, renderer: &SyncSender<Command>) -> Response {
+pub fn handle_state_post(
+    req: &Request,
+    renderer: &SyncSender<Command>,
+    server_state: &LedzillaServerState,
+) -> Response {
+    *server_state.last_client_id.lock().unwrap() = try_or_400!(log_err_result(extract_client_id_header(req)));
+
     let state: ComponentState = try_or_400!(log_err_result(
         json_input(req).map_err(LedzillaApiError::JsonParseFailed)
     ));
@@ -173,7 +188,13 @@ pub fn handle_display_get_on_off(renderer: &SyncSender<Command>) -> Response {
     })
 }
 
-pub fn handle_display_set_on_off(req: &Request, renderer: &SyncSender<Command>) -> Response {
+pub fn handle_display_set_on_off(
+    req: &Request,
+    renderer: &SyncSender<Command>,
+    server_state: &LedzillaServerState,
+) -> Response {
+    *server_state.last_client_id.lock().unwrap() = try_or_400!(log_err_result(extract_client_id_header(req)));
+
     let (response_sender, response_receiver) = channel::<bool>();
 
     try_or_400!(log_err_result(match extract_text_body(req) {
@@ -234,7 +255,14 @@ fn mk_image_asset(
     Ok(asset)
 }
 
-pub fn handle_upload(req: &Request, filename: String, upload_manager: &Mutex<UploadManager>) -> Response {
+pub fn handle_upload(
+    req: &Request,
+    filename: String,
+    upload_manager: &Mutex<UploadManager>,
+    server_state: &LedzillaServerState,
+) -> Response {
+    *server_state.last_client_id.lock().unwrap() = try_or_400!(log_err_result(extract_client_id_header(req)));
+
     let input = try_or_400!(log_err_result(
         post_input!(req, {
             width: Option<u32>,
@@ -277,7 +305,14 @@ pub fn handle_upload(req: &Request, filename: String, upload_manager: &Mutex<Upl
     }
 }
 
-pub fn handle_delete_file(name: &str, upload_manager: &Mutex<UploadManager>) -> Response {
+pub fn handle_delete_file(
+    req: &Request,
+    name: &str,
+    upload_manager: &Mutex<UploadManager>,
+    server_state: &LedzillaServerState,
+) -> Response {
+    *server_state.last_client_id.lock().unwrap() = try_or_400!(log_err_result(extract_client_id_header(req)));
+
     let mut upload_manager = upload_manager.lock().unwrap();
     match upload_manager.try_delete(name) {
         Ok(_) => Response::empty_204(),
@@ -286,4 +321,8 @@ pub fn handle_delete_file(name: &str, upload_manager: &Mutex<UploadManager>) -> 
             Response::empty_404()
         }
     }
+}
+
+pub fn handle_last_modified_id_get(server_state: &LedzillaServerState) -> Response {
+    Response::text(server_state.last_client_id.lock().unwrap().clone())
 }

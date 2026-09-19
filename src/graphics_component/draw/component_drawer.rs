@@ -500,7 +500,10 @@ impl PlotDrawer {
 
         // draw axes
         if let Some(stroke_width) = self.component.axis_stroke {
-            let color = self.axis_color.as_ref().map_or(Rgb888::new(255, 255, 255), |s| s.get());
+            let color = self
+                .axis_color
+                .as_ref()
+                .map_or(Rgb888::new(255, 255, 255), |s| s.get());
 
             // draw the line
             let style_builder = PrimitiveStyleBuilder::new()

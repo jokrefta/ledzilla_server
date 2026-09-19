@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
+# ruff: noqa: UP032
 """
 Some tests for the ledzilla server. Not 100% automated - some manual inspection is
 required to ensure proper output (especially for the display)
 """
 
 
-import requests
+import random
 import traceback
-from time import sleep
-from typing import List, Callable
+from collections.abc import Callable
 from pathlib import Path
+from time import sleep
+
+import requests
 import termcolor
 
 SERVER_ROOT = "http://127.0.0.1:8080/"
@@ -18,13 +21,16 @@ API_ROOT = SERVER_ROOT + "api/"
 CURRENT_DIR = Path(__file__).parent.resolve()
 ROOT_DIR = CURRENT_DIR.parent.parent.resolve()
 
+CLIENT_HEADER = "Ledzilla-Client-ID"
+CLIENT_ID = "test-client-" + str(random.randrange(100_000))
+
 def get_empty_state_json():
     return {"components": []}
 
 def assert_get_info():
     print("Sending GET /info")
     resp = requests.get(API_ROOT + "info")
-    print("  Response [{}]: {}".format(resp.status_code, resp.text))
+    print("  Response [{}]: {}".format(resp.status_code, resp.text)) 
     assert 200 == resp.status_code
 
 def assert_get_fonts():
@@ -33,6 +39,13 @@ def assert_get_fonts():
     print("  Response [{}]: {}".format(resp.status_code, resp.text))
     assert 200 == resp.status_code
     return resp.json()["available_fonts"]
+
+def assert_get_last_client():
+    print("Sending GET /last-modified-by")
+    resp = requests.get(API_ROOT + "last-modified-by")
+    print("  Response [{}]: {}".format(resp.status_code, resp.text)) 
+    assert 200 == resp.status_code
+    assert CLIENT_ID == resp.text
 
 # requires manual inspection to ensure the components match what is expected
 def assert_get_state():
@@ -44,13 +57,13 @@ def assert_get_state():
 
 def assert_post_display_on():
     print("Sending POST /display/on-off-state (on)")
-    resp = requests.post(API_ROOT + "display/on-off-state", data="on")
+    resp = requests.post(API_ROOT + "display/on-off-state", data="on", headers={CLIENT_HEADER: CLIENT_ID})
     print("  Response [{}]: {}".format(resp.status_code, resp.text))
     assert 204 == resp.status_code
 
 def assert_post_display_off():
     print("Sending POST /display/on-off-state (off)")
-    resp = requests.post(API_ROOT + "display/on-off-state", data="off")
+    resp = requests.post(API_ROOT + "display/on-off-state", data="off", headers={CLIENT_HEADER: CLIENT_ID})
     print("  Response [{}]: {}".format(resp.status_code, resp.text))
     assert 204 == resp.status_code
 
@@ -62,7 +75,7 @@ def assert_flash_display(seconds):
 
 def assert_post_state(state_json, is_valid=True):
     print("Sending POST /state")
-    resp = requests.post(API_ROOT + "state", json=state_json)
+    resp = requests.post(API_ROOT + "state", json=state_json, headers={CLIENT_HEADER: CLIENT_ID})
     print("  Response [{}]: {}".format(resp.status_code, resp.text))
     if is_valid:
         assert 204 == resp.status_code
@@ -76,7 +89,7 @@ def assert_reset_state():
     for filename in assert_list_files():
         assert_delete_file(filename)
 
-def assert_list_files() -> List:
+def assert_list_files() -> list:
     print("Sending GET /files")
     resp = requests.get(API_ROOT + "files")
     print("  Response [{}]: {}".format(resp.status_code, resp.text))
@@ -92,7 +105,9 @@ def assert_put_file(target_file_name, file_data, is_animated, is_new_file, width
             "height": height,
             "animated": "true" if is_animated else "false"
         },
-        files={"file": file_data}
+        files={"file": file_data},
+        headers={CLIENT_HEADER: CLIENT_ID}
+
     )
     print("  Response [{}]: {}".format(resp.status_code, resp.text))
     if is_new_file:
@@ -102,13 +117,13 @@ def assert_put_file(target_file_name, file_data, is_animated, is_new_file, width
 
 def assert_delete_file(target_file_name):
     print("Sending DELETE /files/" + target_file_name)
-    resp = requests.delete(API_ROOT + "files/" + target_file_name)
+    resp = requests.delete(API_ROOT + "files/" + target_file_name, headers={CLIENT_HEADER: CLIENT_ID})
     print("  Response [{}]: {}".format(resp.status_code, resp.text))
     assert 204 == resp.status_code
 
 #####################################################
 
-test_cases : List[Callable]= []
+test_cases : list[Callable]= []
 
 # decorator to define a test case and add to list at same time
 def testcase(func):
@@ -132,6 +147,11 @@ def test_get_state():
 @testcase
 def test_post_state_empty():
     assert_post_state(get_empty_state_json())
+
+@testcase
+def test_post_state_empty_and_get_last_client():
+    assert_post_state(get_empty_state_json())
+    assert_get_last_client()
 
 @testcase
 def test_post_state_line_and_get_state():
@@ -641,7 +661,7 @@ print("Starting...")
 failures = 0
 for test in test_cases:
     try:
-        print("")
+        print()
         print("==================================")
         print("Running test", test.__name__)
         test()

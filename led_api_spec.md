@@ -1,6 +1,6 @@
-API version: 0.7.3
+API version: 0.8.0
 
-Date: 2026-09-17
+Date: 2026-09-19
 
 # LEDzilla API
 
@@ -16,28 +16,47 @@ Returns display capabilities.
 {
   "width": 64,
   "height": 32,
-  "api_version": "0.7.2",
+  "api_version": "0.8.0",
   "available_fonts": ["mono_default_4x6", "mono_default_5x7", ...],
 }
 ```
 
 ---
 
+## GET /last-modified-by
+Returns the client ID for the most recent modifying request to the API.
+
+`Ledzilla-Client-ID` is a required header for some API calls. It contains an ID string that should be unique to different clients. 
+The purpose is to provide clients a mechanism to detect if other clients are actively modifying state at the 
+same time. For example, a long-running program that periodically writes to the display may wish to 
+halt itself if someone else starts using the display.
+
+A typical flow might look like:
+- Client A writes state
+- Some time later, Client A wishes to write the state again. But first it GETs /last-modified-by and checks the client ID.
+- if client id matches our client id, proceed to write state.
+- Otherwise some other client is active. Display a warning, stop execution, or something.
+
+**Response:**
+
+`200` with text body containing the ID of the last client to modify the display.
+
+
+
 ## GET /state
 Returns the current display state, reflecting exactly what is on the display.
 
 **Response:**
-```json
-{
-  "components": [ ... ]
-}
-```
+
+JSON, see **State Schema** section of this document
 
 ---
 
 ## POST /state
 Replace the current display state.
-Request body is `application/json`.
+Request body is `application/json`. See **State Schema** section of this document.
+
+Requires a `Ledzilla-Client-ID` header.
 
 **Response:**
 - `204 No Content` on success
@@ -51,6 +70,8 @@ Must be accompanied by a text body.
 
 If body is "on", turns the display on, resuming rendering of the current state.
 If body is "off", Turns the display off. Stops the refresh loop. State is preserved.
+
+Requires a `Ledzilla-Client-ID` header.
 
 **Response:** `204 No Content`
 
@@ -66,6 +87,8 @@ If body is "off", Turns the display off. Stops the refresh loop. State is preser
 Upload a file. Server processes and stores it synchronously.
 Request is `multipart/form-data`. Response may be delayed for large files.
 If a file with the given name already exists, it is replaced.
+
+Requires a `Ledzilla-Client-ID` header.
 
 **Fields:**
 - `file` (required): the file to upload
@@ -101,11 +124,20 @@ List uploaded files.
 ## DELETE /files/\<name\>
 Delete an uploaded file.
 
+Requires a `Ledzilla-Client-ID` header.
+
 **Response:**
 - `204 No Content` on success
 - `404 Not Found` if file does not exist
 
 ---
+
+## State Schema
+```json
+{
+  "components": [ ... ]
+}
+```
 
 ## Component Schema
 
