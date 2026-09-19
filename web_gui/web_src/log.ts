@@ -1,4 +1,4 @@
-export type LogKind = "ok" | "err" | "info" | "";
+export type LogKind = "ok" | "err" | "info" | "warn" | "";
 
 export function log(msg: string, kind: LogKind = ""): void {
   const el = document.getElementById("log");

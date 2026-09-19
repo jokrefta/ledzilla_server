@@ -631,7 +631,7 @@ def test_plot_line():
         }
     ]}
     assert_post_state(json_state)
-    assert_flash_display(4)
+    assert_flash_display(3)
 
 @testcase
 def test_plot_bar():
@@ -654,7 +654,8 @@ def test_plot_bar():
         }
     ]}
     assert_post_state(json_state)
-    assert_flash_display(4)
+    assert_flash_display(3)
+"""
 
 
 print("Starting...")

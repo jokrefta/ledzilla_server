@@ -639,3 +639,7 @@ hr {
 .log-info {
   color: var(--accent);
 }
+
+.log-warn {
+  color: #ffb454; /* amber, distinct from --danger and --accent */
+}

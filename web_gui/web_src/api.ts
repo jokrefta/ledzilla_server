@@ -2,8 +2,26 @@ import type { DisplayInfo, DisplayState } from "./types.js";
 import { buildStateFromCards, loadComponentsFromState } from "./card.js";
 import { setAvailableFonts } from "./components.js";
 import { log } from "./log.js";
+import { getClientId, isFirstWriteThisSession, markWrittenThisSession } from "./client_id.js";
 
 const BASE = "/api";
+
+/** Before a write, checks whether someone else has modified state more
+ *  recently than us. Skipped on the first write of the session.
+ *  Returns false if the user chooses to abort. */
+async function checkLastModifiedBy(): Promise<boolean> {
+  if (isFirstWriteThisSession()) {
+    markWrittenThisSession();
+    return true;
+  }
+
+  const lastClient: string | null = await apiCall("GET", "/last-modified-by").catch(() => null);
+  const trimmed = lastClient?.trim();
+  if (!trimmed || trimmed === getClientId()) return true;
+
+  log(`Last write was by a different client: "${trimmed}"`, "warn");
+  return confirm(`Another client ("${trimmed}") made the most recent change. Continue anyway?`);
+}
 
 /** Thin fetch wrapper shared by every module that talks to the API
  *  (this file, and files.ts for the /files endpoints). Logs every call
@@ -14,6 +32,17 @@ export async function apiCall(
   body?: object | string,
   isFormData = false,
 ): Promise<any> {
+  // Check "did someone else modify state since we last did?"
+  // Only applies to writes - GETs are read-only, so there's nothing to protect.
+  // This also prevents infinite recursion, as checkLastModifiedBy() itself calls apiCall("GET", ...).
+  if (method !== "GET") {
+    const proceed = await checkLastModifiedBy();
+    if (!proceed) {
+      log(`Aborted ${method} ${path}: user declined to override`, "err");
+      throw new Error("Aborted by user: another client is active");
+    }
+  }
+
   const opts: RequestInit = { method };
   if (body !== undefined) {
     if (isFormData) {
@@ -25,6 +54,9 @@ export async function apiCall(
       opts.headers = { "Content-Type": "application/json" };
       opts.body = JSON.stringify(body);
     }
+  }
+  if (method !== "GET") {
+    opts.headers = { ...opts.headers, "Ledzilla-Client-ID": getClientId() };
   }
 
   log(`${method} ${path}`, "info");
@@ -79,11 +111,11 @@ function setDisplayPowerIndicator(state: "on" | "off" | null): void {
 export const api = {
   async probe(): Promise<void> {
     const info: DisplayInfo | null = await apiCall("GET", "/info").catch(() => null);
-    if (info) {
-      document.getElementById("display-info")!.innerHTML =
-        `${info.width} × ${info.height} px<br>API v${info.api_version}`;
-      setAvailableFonts(info.available_fonts);
-    }
+    const clientLine = `Client: ${getClientId()}`;
+    document.getElementById("display-info")!.innerHTML = info
+      ? `${info.width} × ${info.height} px<br>API v${info.api_version}<br>${clientLine}`
+      : clientLine;
+    if (info) setAvailableFonts(info.available_fonts);
   },
 
   async getState(): Promise<void> {
@@ -92,6 +124,7 @@ export const api = {
       log(`Pulled ${state.components?.length ?? 0} components`, "info");
       loadComponentsFromState(state.components ?? []);
     }
+    await api.refreshDisplayPower();
   },
 
   async pushState(): Promise<void> {
