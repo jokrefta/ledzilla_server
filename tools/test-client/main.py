@@ -543,6 +543,31 @@ def test_draw_animated_gif_scrolling_diag():
     assert_post_state(json_state)
     assert_flash_display(2.5)
 
+@testcase
+def test_draw_animated_gif_scrolling_huge_period():
+    assert_reset_state()
+
+    with open(ROOT_DIR / "assets" / "test" / "gradient.gif", "rb") as f:
+        assert_put_file("animated.gif", ("dont_care_filename", f, "image/gif"), True, True)
+
+    json_state = {"components": [
+        {
+            "type": "image",
+            "x":  -30,
+            "y": -10,
+            "source": "animated.gif",
+            "frame_slowdown": 8,
+
+            "motion_config": {
+                "direction_degrees": 10,
+                "distance_per_tick": 20,
+                "periodicity": 310
+            }
+        }
+    ]}
+    assert_post_state(json_state)
+    assert_flash_display(3)
+
 
 @testcase
 def test_draw_many_scrolling():

@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::ops::{RangeFull, RangeInclusive};
 
 fn vec2_from_direction(direction_degrees: u16) -> glam::Vec2 {
     match direction_degrees {
@@ -7,6 +7,95 @@ fn vec2_from_direction(direction_degrees: u16) -> glam::Vec2 {
         180 => (-1.0, 0.0).into(),
         270 => (0.0, -1.0).into(),
         _ => glam::Vec2::from_angle(f32::from(direction_degrees).to_radians()),
+    }
+}
+
+#[derive(Debug, Clone)]
+enum IntegerRange {
+    Bounded(RangeInclusive<i32>),
+    Full(RangeFull),
+}
+
+impl IntegerRange {
+    fn intersect(&self, other: &Self) -> Self {
+        let Self::Bounded(self_range_inc) = self else {
+            return other.clone();
+        };
+        let Self::Bounded(other_range_inc) = other else {
+            return self.clone();
+        };
+
+        let result_start = *self_range_inc.start().max(other_range_inc.start());
+        let result_end = *self_range_inc.end().min(other_range_inc.end());
+
+        Self::Bounded(result_start..=result_end)
+    }
+}
+
+fn mk_empty_range() -> IntegerRange {
+    #[allow(clippy::reversed_empty_ranges)]
+    IntegerRange::Bounded(1..=0)
+}
+
+/// Returns set of all integer k such that
+/// lower <= k <= upper.
+fn find_all_integers_between_two_float_bounds(lower: f32, upper: f32) -> IntegerRange {
+    IntegerRange::Bounded(lower.ceil() as i32..=upper.floor() as i32)
+}
+
+/// Returns an iterator over all integer k (in order) such that
+/// lower <= (k * value) <= upper.
+/// If no such values exist, return an iterator that yields no items.
+/// If the bounds are satisfied for all possible values of k, return None. This could happen
+/// if k == 0.
+///
+/// Example: Calling with (value = 6.0, lower=-20.0, upper=10.0) would return an iterator that
+/// yields {-3, -2, -1, 0, 1} because -3*6, -2*6, ..., 1*6 are all within the bounds.
+fn find_integer_k_vals_for_scaling_in_bounds(value: f32, lower: f32, upper: f32) -> IntegerRange {
+    if value == 0.0 {
+        // Scaling it won't do anything, so it's either always in bounds or never in bounds.
+        if lower <= value && value <= upper {
+            return IntegerRange::Full(..);
+        } else {
+            return mk_empty_range();
+        };
+    }
+
+    // lower <= (k * value) <= upper implies that
+    // (lower / value) <= k <= (upper / value).
+    // Unless value is negative, in which case the bounds will flip and we must reverse the max/min.
+    let (mut lower_k_bound, mut upper_k_bound) = (lower / value, upper / value);
+    if value < 0.0 {
+        std::mem::swap(&mut lower_k_bound, &mut upper_k_bound);
+    }
+
+    find_all_integers_between_two_float_bounds(lower_k_bound, upper_k_bound)
+}
+
+/// Returns set of all v such that:
+///   x_min <= v.x <= x_max and
+///   y_min <= v.y <= y_max and
+///   v can be expressed as (k * vector) for some integer k.
+/// A None return means there are infinitely many such values (possible when |vector| == 0)
+fn find_all_multiples_of_vector_within_bounding_box(
+    vector: glam::Vec2,
+    bbox_top_left: glam::Vec2,
+    bbox_bot_right: glam::Vec2,
+) -> Option<Vec<glam::Vec2>> {
+    dbg!((vector, bbox_top_left, bbox_bot_right));
+    // Find the possible range for k when considering only the x coordinates
+    let k_bounds_from_x =
+        find_integer_k_vals_for_scaling_in_bounds(vector.x, bbox_top_left.x, bbox_bot_right.x);
+
+    // Find the possible range for k when considering only the y coordinates
+    let k_bounds_from_y =
+        find_integer_k_vals_for_scaling_in_bounds(vector.y, bbox_top_left.y, bbox_bot_right.y);
+
+    let k_bounds = k_bounds_from_x.intersect(&k_bounds_from_y);
+
+    match k_bounds {
+        IntegerRange::Bounded(k_range) => Some(k_range.map(|k| k as f32 * vector).collect()),
+        IntegerRange::Full(_) => None,
     }
 }
 
@@ -50,28 +139,19 @@ pub struct ScrollingMovementTracker {
     displayable_x_bounds: (f32, f32),
     /// Relative to the initial instance position
     displayable_y_bounds: (f32, f32),
-    repetition_offset: glam::Vec2,
+    periodicity_vector: glam::Vec2,
 
-    /// Offsets of all instances (duplicate copies) of the component. These are all relative
-    /// to the initial position of the object. There may only be one of these, if the scroll
-    /// periodicity is high enough that only one copy of the object is on screen at any time.
-    ///
-    /// The vec of offsets is kept sorted so that the instaces at the "leading edge"
-    /// of the motion are at the end of the vec, and the instances at the "trailing" edge
-    /// are at the start.
-    current_offsets: VecDeque<glam::Vec2>,
+    /// Offset of an instance of the component, relative to the initial position.
+    /// The positions of other instances of the component can be found from this value by adding
+    /// or subtracting multiples of the periodicity vector.
+    current_position: glam::Vec2,
 }
 
 impl ScrollingMovementTracker {
     pub fn new(config: ScrollingMovementConfig) -> Result<Self, String> {
-        if config.distance_per_tick > config.periodicity as f32 {
-            // not supported by tick() currently
-            return Err("Unsupported when distance_per_tick > periodicity".to_string());
-        }
-
         let translation_per_tick = vec2_from_direction(config.direction_degrees) * config.distance_per_tick;
 
-        let repetition_offset = vec2_from_direction(config.direction_degrees) * config.periodicity as f32;
+        let periodicity_vector = vec2_from_direction(config.direction_degrees) * config.periodicity as f32;
 
         // The coordinate plane is shifted to be relative to the initial component position for
         // all calculations.
@@ -86,31 +166,8 @@ impl ScrollingMovementTracker {
             config.canvas_size.1 as f32 - config.initial_pos.y as f32,
         );
 
-        if is_instance_oob(displayable_x_bounds, displayable_y_bounds, glam::Vec2::ZERO) {
-            return Err("Unsupported when initial position is entirely off screen".to_string());
-        }
-
         // start out with the initial position (offset 0,0)
-        let mut current_offsets: VecDeque<glam::Vec2> = VecDeque::from(vec![glam::Vec2::ZERO]);
-        // prepend all instances that come "before" the initial position
-        for i in 1.. {
-            let instance = -repetition_offset * i as f32;
-            if is_instance_oob(displayable_x_bounds, displayable_y_bounds, instance) {
-                break; // We've gone past the end
-            }
-            log::trace!("Pushing offset {} to front", instance);
-            current_offsets.push_front(instance);
-        }
-        // append all instances that come "after" it
-        for i in 0.. {
-            let instance = repetition_offset * i as f32;
-            if is_instance_oob(displayable_x_bounds, displayable_y_bounds, instance) {
-                break; // We've gone past the end
-            }
-            log::trace!("Pushing offset {} to back", instance);
-            current_offsets.push_back(instance);
-        }
-        log::debug!("ScrollingMovementTracker offsets to start: {:?}", current_offsets);
+        let current_position = glam::Vec2::ZERO;
         log::debug!(
             "ScrollingMovementTracker bounds: {:?} / {:?}",
             displayable_x_bounds,
@@ -121,73 +178,89 @@ impl ScrollingMovementTracker {
             translation_per_tick,
             displayable_x_bounds,
             displayable_y_bounds,
-            repetition_offset,
-            current_offsets,
+            periodicity_vector,
+            current_position,
         })
     }
 
-    /// Update current offsets
+    /// Update current positions
     pub fn tick(&mut self) {
-        // Update existing instance offsets
-        for v in self.current_offsets.iter_mut() {
-            *v += self.translation_per_tick;
-        }
-        // log::trace!( "ScrollingMovementTracker offsets after update: {:?}", self.current_offsets);
+        // Update existing instance offset
+        self.current_position += self.translation_per_tick;
 
-        /*
-         * If one has moved off screen, delete it. If it's time to add one on screen, create it.
-         *
-         * HOWEVER, never delete if it's the only instance left. We need at least one coordinate so
-         * we have a reference point for creating the next one.
-         * This means if the periodicity is large enough, there may be zero instances on the
-         * screen for some frames, but self.current_offsets will always have at least one element.
-         *
-         * This assumes that only one will go off screen in a given tick - which is a safe
-         * assumption iff the repetition separation is bigger than the distance per tick.
-         */
-        assert!(self.translation_per_tick.length_squared() < self.repetition_offset.length_squared());
-        if self.current_offsets.len() > 1
-            && is_instance_oob(
-                self.displayable_x_bounds,
-                self.displayable_y_bounds,
-                *self.current_offsets.back().unwrap(),
-            )
-        {
-            log::trace!("ScrollingMovementTracker - Destroy instance!");
-            self.current_offsets.pop_back();
-        }
-
-        let potential_new_spawn = self.current_offsets.front().unwrap() - self.repetition_offset;
-        // log::trace!("ScrollingMovementTracker - testing potential new spawn {}", potential_new_spawn);
-        if !is_instance_oob(
+        // No need for the position to keep getting bigger and bigger
+        if is_instance_oob(
             self.displayable_x_bounds,
             self.displayable_y_bounds,
-            potential_new_spawn,
+            self.current_position,
         ) {
-            log::trace!("ScrollingMovementTracker - Spawn new!");
-            self.current_offsets.push_front(potential_new_spawn);
+            println!("{}", line!());
+            let on_screen_positions = self.get_unrounded_instance_positions();
+            dbg!(&on_screen_positions);
+            if !on_screen_positions.is_empty() {
+                println!("{}", line!());
+                self.current_position = on_screen_positions[0];
+            }
+        }
+
+        log::trace!(
+            "ScrollingMovementTracker offset after update: {:?}",
+            self.current_position
+        );
+    }
+
+    /// Gets positions for each visible instance of the component.
+    /// These are expressed as offsets relative to the initial component position,
+    /// rounded to integer coordinates for rendering.
+    fn get_unrounded_instance_positions(&self) -> Vec<glam::Vec2> {
+        /* let B1, B2 be two points that form opposite corners of the displayable bounding box.
+         *
+         * Let inst_pos(k) = (current_position + k * periodicity) for some integer k.
+         *
+         * We want the set of all instance positions such that inst_pos(k) falls within the rectangle
+         * formed by B1 and B2.
+         *
+         * So, we need to find the set of all (k * periodicity) offsets that fall within the rectanlge
+         * formed by (B1 - current_position), (B2 - current_position).
+         */
+
+        let bbox_corner_1 = glam::vec2(self.displayable_x_bounds.0, self.displayable_y_bounds.0);
+        let bbox_corner_2 = glam::vec2(self.displayable_x_bounds.1, self.displayable_y_bounds.1);
+        dbg!((bbox_corner_1, bbox_corner_2));
+        let result = find_all_multiples_of_vector_within_bounding_box(
+            self.periodicity_vector,
+            bbox_corner_1 - self.current_position,
+            bbox_corner_2 - self.current_position,
+        );
+        dbg!(&result);
+
+        match result {
+            Some(positions) => positions.iter().map(|v| v + self.current_position).collect(),
+            None => {
+                // In this case the periodicity vector is zero magnitude, so just return a single position
+                // instead of infinitely many copies on top of each other.
+                vec![self.current_position]
+            }
         }
     }
 
-    /// Gets offsets for each instance of the component.
-    /// These are rounded to integer coordinates for rendering.
-    pub fn get_offsets(&self) -> Vec<glam::IVec2> {
+    pub fn get_display_instance_positions(&self) -> Vec<glam::IVec2> {
         // Round by adding 0.5 and flooring because we want .5 to round the same direction whether
         // positive or negative, which the round() method doesn't do.
-        self.current_offsets
+        self.get_unrounded_instance_positions()
             .iter()
             .map(|v| (v + 0.5).floor().as_ivec2())
             .collect()
     }
 
     /// Calls the provided function `f` once for each current component instance.
-    /// `f` takes a single argument, the offset (relative to initial component position)
+    /// `f` takes a single argument, the pixel offset (relative to initial component position)
     /// of the instance.
-    pub fn for_each_instance<F>(&self, mut f: F)
+    pub fn for_each_display_instance<F>(&self, mut f: F)
     where
         F: FnMut(glam::IVec2),
     {
-        for pos in self.get_offsets() {
+        for pos in self.get_display_instance_positions() {
             f(pos)
         }
     }

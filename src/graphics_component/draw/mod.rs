@@ -72,7 +72,7 @@ impl MovableComponentDrawer {
         T: embedded_graphics::draw_target::DrawTarget<Color = Rgb888, Error: Debug>,
     {
         if let Some(tracker) = &mut self.movement_tracker {
-            tracker.for_each_instance(|offset| self.drawer.draw(target, offset));
+            tracker.for_each_display_instance(|offset| self.drawer.draw(target, offset));
             tracker.tick();
         } else {
             self.drawer.draw(target, (0, 0).into());
