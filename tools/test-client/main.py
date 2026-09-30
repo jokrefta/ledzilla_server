@@ -680,8 +680,27 @@ def test_plot_bar():
     ]}
     assert_post_state(json_state)
     assert_flash_display(3)
-"""
 
+@testcase
+def test_state_expiry():
+    assert_reset_state()
+
+    json_state = {
+        "components": [
+            {
+                "type": "text",
+                "x":  100,
+                "y": 40,
+                "content": "should disappear",
+                "font": "mono_default_7x13_italic",
+                "color": {"type": "static", "color": "#44AA44"},
+                "alignment": "Center"
+            }
+        ],
+        "expiration_sec": 2,
+    }
+    assert_post_state(json_state)
+    assert_flash_display(4)
 
 print("Starting...")
 failures = 0

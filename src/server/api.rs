@@ -9,6 +9,7 @@ use std::{
 use anyhow::Result;
 use log::{debug, trace};
 use rouille::{Request, Response, input::post::BufferedFile, post_input, try_or_400};
+use serde_with::skip_serializing_none;
 use strum::VariantNames;
 use thiserror::Error;
 
@@ -16,11 +17,11 @@ use super::log_err_result;
 use crate::{
     LedzillaServerConfig, LedzillaServerState,
     graphics_component::ComponentList,
-    renderer::{Command, CommandError},
+    renderer::{Command, CommandError, ComponentCommandParams},
     upload::{self, AnimatedImageBuf, ImageBuf, UploadError, UploadManager, UploadedAsset},
 };
 
-const API_VERSION: &str = "0.8.0";
+const API_VERSION: &str = "0.8.1";
 
 #[derive(Debug, Error)]
 pub enum LedzillaApiError {
@@ -59,9 +60,11 @@ struct FilesList<'a> {
     files: Vec<&'a str>,
 }
 
+#[skip_serializing_none]
 #[derive(serde::Deserialize, serde::Serialize)]
 struct ComponentState {
     components: ComponentList,
+    expiration_sec: Option<u32>,
 }
 
 /// Equivalent to rouille::input::json::json_input() except it extracts the message as a string
@@ -142,13 +145,23 @@ pub fn handle_info_get(config: &LedzillaServerConfig) -> Response {
 }
 
 pub fn handle_state_get(renderer: &SyncSender<Command>) -> Response {
-    let (response_sender, response_receiver) = channel::<ComponentList>();
+    let (response_sender, response_receiver) = channel::<ComponentCommandParams>();
     trace!("sending get component state command");
     renderer.send(Command::GetComponents { response_sender }).unwrap();
 
-    let components = response_receiver.recv().unwrap();
-    trace!("got state response {:?}", components);
-    Response::json(&ComponentState { components })
+    let response = response_receiver.recv().unwrap();
+    trace!("got state response {:?}", response.components);
+    Response::json(&ComponentState {
+        components: response.components,
+        expiration_sec: response.expiration_time.map(|t| {
+            let now = std::time::Instant::now();
+            if now < t {
+                u32::try_from((t - now).as_secs()).unwrap_or(u32::MAX)
+            } else {
+                0
+            }
+        }),
+    })
 }
 
 pub fn handle_state_post(
@@ -158,14 +171,20 @@ pub fn handle_state_post(
 ) -> Response {
     *server_state.last_client_id.lock().unwrap() = try_or_400!(log_err_result(extract_client_id_header(req)));
 
+    let now = std::time::Instant::now();
     let state: ComponentState = try_or_400!(log_err_result(
         json_input(req).map_err(LedzillaApiError::JsonParseFailed)
     ));
     let (response_sender, response_receiver) = channel::<Result<(), CommandError>>();
     renderer
         .send(Command::SetComponents {
-            components: state.components,
             response_sender,
+            params: ComponentCommandParams {
+                components: state.components,
+                expiration_time: state
+                    .expiration_sec
+                    .map(|s| now + std::time::Duration::from_secs(s.into())),
+            },
         })
         .unwrap();
 

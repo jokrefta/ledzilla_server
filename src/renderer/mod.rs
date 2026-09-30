@@ -35,6 +35,12 @@ impl From<draw::DrawerCreationError> for CommandError {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct ComponentCommandParams {
+    pub components: ComponentList,
+    pub expiration_time: Option<std::time::Instant>,
+}
+
 #[derive(Debug)]
 pub enum Command {
     Start {
@@ -47,10 +53,10 @@ pub enum Command {
         response_sender: Sender<bool>,
     },
     GetComponents {
-        response_sender: Sender<ComponentList>,
+        response_sender: Sender<ComponentCommandParams>,
     },
     SetComponents {
-        components: ComponentList,
+        params: ComponentCommandParams,
         response_sender: Sender<Result<(), CommandError>>,
     },
 }
@@ -64,6 +70,7 @@ where
     // Should always be valid, but is Option so we can move out of &mut self
     state: StateWrapper<Disp>,
     components: Vec<MovableComponentDrawer>,
+    components_expiration: Option<std::time::Instant>,
     upload_manager: Arc<Mutex<upload::UploadManager>>,
     config: LedzillaServerConfig,
 }
@@ -84,6 +91,7 @@ where
             components: Vec::new(),
             upload_manager,
             config,
+            components_expiration: None,
         }
     }
 
@@ -111,6 +119,11 @@ where
                     self.state.update_rendering_state(|rs| {
                         Self::render(&mut self.components, rs, self.config.fps_log_lvl)
                     });
+
+                    if let Some(t) = self.components_expiration && std::time::Instant::now() > t {
+                        self.components.clear();
+                        self.components_expiration = None;
+                    }
 
                     // Early return if command found
                     match command_receiver.try_recv() {
@@ -152,14 +165,15 @@ where
                 }
                 //__________________________________________________
                 (state, Command::GetComponents {response_sender}) => {
-                    Self::get_components(&self.components, response_sender);
+                    Self::get_components(&self.components, self.components_expiration, response_sender);
                     state
                 }
                 //__________________________________________________
-                (state, Command::SetComponents {response_sender, components}) => {
+                (state, Command::SetComponents {response_sender, params}) => {
                     Self::set_components(
                         &mut self.components,
-                        components,
+                        &mut self.components_expiration,
+                        params,
                         response_sender,
                         &self.upload_manager,
                         self.config.canvas_size
@@ -245,7 +259,7 @@ where
                     fps_log_lvl,
                     "Refresh rate: {} (~{:.1} ms per frame)",
                     r,
-                    1.0 / r as f32,
+                    1000.0 / r as f32,
                 );
             }
         }
@@ -258,17 +272,23 @@ where
 
     /// Update the given components and send a success response on the channel.
     fn set_components(
-        to_update: &mut Vec<MovableComponentDrawer>,
-        new_components: ComponentList,
+        components_to_update: &mut Vec<MovableComponentDrawer>,
+        expiration_to_update: &mut Option<std::time::Instant>,
+        new_component_params: ComponentCommandParams,
         success_sender: Sender<Result<(), CommandError>>,
         upload_manager: &Mutex<upload::UploadManager>,
         canvas_size: (u32, u32),
     ) {
-        debug!("Changing components. New size: {}", new_components.len());
+        debug!(
+            "Changing components. New size: {}, expiry {:?}",
+            new_component_params.components.len(),
+            new_component_params.expiration_time
+        );
 
-        match Self::make_component_drawers(new_components, upload_manager, canvas_size) {
+        match Self::make_component_drawers(new_component_params.components, upload_manager, canvas_size) {
             Ok(drawers) => {
-                *to_update = drawers;
+                *components_to_update = drawers;
+                *expiration_to_update = new_component_params.expiration_time;
                 success_sender.send(Ok(())).unwrap();
             }
             Err(e) => {
@@ -279,14 +299,19 @@ where
 
     /// Extract copies of the graphics components into a ComponentList and send it
     /// on the channel
-    fn get_components(component_drawers: &[MovableComponentDrawer], response_sender: Sender<ComponentList>) {
+    fn get_components(
+        component_drawers: &[MovableComponentDrawer],
+        expiration_time: Option<std::time::Instant>,
+        response_sender: Sender<ComponentCommandParams>,
+    ) {
         response_sender
-            .send(
-                component_drawers
+            .send(ComponentCommandParams {
+                components: component_drawers
                     .iter()
                     .map(|a| a.get_cloned_component())
                     .collect(),
-            )
+                expiration_time,
+            })
             .unwrap();
     }
 

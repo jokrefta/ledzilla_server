@@ -1,6 +1,6 @@
-API version: 0.8.0
+API version: 0.8.1
 
-Date: 2026-09-19
+Date: 2026-09-27
 
 # LEDzilla API
 
@@ -16,7 +16,7 @@ Returns display capabilities.
 {
   "width": 64,
   "height": 32,
-  "api_version": "0.8.0",
+  "api_version": "0.8.1",
   "available_fonts": ["mono_default_4x6", "mono_default_5x7", ...],
 }
 ```
@@ -136,8 +136,14 @@ Requires a `Ledzilla-Client-ID` header.
 ```json
 {
   "components": [ ... ]
+  "expiration_sec": 120,
 }
 ```
+
+`expiration_sec` is optional. It allows the client to specify that the provided state should be cleared 
+after some time in case the client unexpectedly stops or loses connection.  If specified, this value will count 
+down until the state is written again, or the timer reaches zero.  Upon reaching zero, the state will be cleared. 
+If `expiration_sec` is omitted when setting the state, it is treated as infinite (no timeout).
 
 ## Component Schema
 
